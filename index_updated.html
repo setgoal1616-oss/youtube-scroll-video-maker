@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ScrollVideo Studio PRO</title>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;700&family=Noto+Sans+Devanagari:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b0d14;color:#fff;font-family:Arial,sans-serif}
+header{padding:18px 22px;background:#151824;border-bottom:1px solid #292d3b}
+header h2{margin:0;color:#a995ff;font-size:24px}
+header p{color:#aaa;margin:7px 0 0;font-size:13px}
+main{max-width:1450px;margin:auto;padding:18px}
+.panel{background:#171b28;padding:18px;border:1px solid #292e40;border-radius:14px;margin-bottom:18px}
+h3{margin:0 0 15px;color:#b9aaff;font-size:17px}
+label{display:block;margin:12px 0 6px;color:#c8c8d2;font-size:13px}
+input,select,textarea{width:100%;padding:11px;border-radius:8px;border:1px solid #363c50;background:#0d111d;color:white;outline:none;font-size:14px}
+input[type=color]{height:42px;padding:4px}
+input[type=range]{padding:0;accent-color:#9078ff}
+input[type=checkbox]{width:auto}
+textarea{resize:vertical;line-height:1.6}
+button{padding:11px 16px;border:0;border-radius:8px;background:#8065f5;color:white;font-weight:bold;cursor:pointer;margin:4px 2px}
+button:hover{filter:brightness(1.15)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.secondary{background:#34394b}.green{background:#148b68}.red{background:#a63d50}
+.editor-layout{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.editor-box{min-width:0}
+#content{min-height:360px;font-size:16px}
+.controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.row{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+.row button{flex:1;min-width:90px}
+.note{color:#9ca3b5;font-size:12px;line-height:1.6}
+.adjust-hint{background:#20263a;border:1px solid #39425f;border-radius:8px;padding:9px;color:#cbd5e1;font-size:12px;line-height:1.5;margin:8px 0 12px}
+.counter{color:#9d91d8;font-size:12px;margin-top:7px;text-align:right}
+#preview{position:relative;width:100%;max-width:100%;margin:0 auto;aspect-ratio:16/9;background:#000;overflow:hidden;border:1px solid #41445a;border-radius:8px}
+#bgImage,#bgVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+#scrollText{position:absolute;top:100%;left:8%;width:84%;white-space:pre-wrap;overflow-wrap:anywhere;text-align:center;font-size:30px;line-height:1.6;color:white;font-family:Arial,sans-serif;text-shadow:0 2px 8px #000;z-index:3}
+#logoPreview{position:absolute;width:75px;height:75px;object-fit:contain;top:15px;right:15px;z-index:5;display:none;touch-action:none;cursor:move;user-select:none}
+#watermarkPreview{position:absolute;bottom:12px;right:15px;color:white;font-size:16px;font-weight:bold;z-index:5;text-shadow:0 2px 5px black;pointer-events:auto;touch-action:none;cursor:move;user-select:none;white-space:nowrap}
+#subscribePreview{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.5);opacity:0;z-index:10;text-align:center;width:90%;pointer-events:none}
+#subscribePreview.show{animation:subscribeIn .7s ease forwards}
+@keyframes subscribeIn{to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.subscribe-card{display:inline-block;padding:15px 20px;background:rgba(0,0,0,.82);border:1px solid rgba(255,255,255,.2);border-radius:15px;box-shadow:0 5px 25px #000}
+.subscribe-title{font-size:clamp(16px,3vw,28px);font-weight:bold;margin-bottom:12px}
+.subscribe-button{display:inline-block;padding:12px 23px;background:#e62117;border-radius:9px;font-size:clamp(14px,2vw,21px);font-weight:bold;color:white;animation:pulse 1s infinite}
+@keyframes pulse{50%{transform:scale(1.07)}}
+.subscribe-icons{margin-top:12px;font-size:24px}
+.status{color:#a995ff;font-size:14px;margin-top:12px}
+.timeline{margin-top:14px;padding:13px;background:#0d111d;border:1px solid #30364a;border-radius:10px}
+.timeline-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;color:#d7d2f4}
+.timeline-time{font-variant-numeric:tabular-nums;color:#fff;font-weight:bold}
+#timelineSeek{width:100%;margin:4px 0 8px;accent-color:#8d75ff;cursor:pointer}
+.timeline-marks{display:flex;justify-content:space-between;color:#8991a5;font-size:10px;font-variant-numeric:tabular-nums}
+.duration-settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.duration-settings .full{grid-column:1/-1}
+.transport{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px}
+.transport button{min-width:78px}
+@media(max-width:380px){.duration-settings{grid-template-columns:1fr}.duration-settings .full{grid-column:auto}}
+.section-divider{border:0;border-top:1px solid #30364a;margin:18px 0}
+footer{text-align:center;color:#777;padding:20px;font-size:12px}
+
+/* ADMIN LOGIN PAGE */
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:#0b0d14}
+.login-card{width:100%;max-width:390px;padding:30px 24px;background:#171b28;border:1px solid #39344f;border-radius:18px;box-shadow:0 10px 40px #0008}
+.login-card h2{text-align:center;color:#a995ff;margin:0 0 8px;font-size:25px}
+.login-card p{text-align:center;color:#999;font-size:13px;margin:0 0 25px}
+.login-card label{display:block;margin:15px 0 7px;color:#ccc;font-size:13px}
+.login-card input{width:100%;padding:13px;border:1px solid #363c50;border-radius:8px;background:#0d111d;color:white;font-size:15px}
+.password-box{display:flex;gap:7px}.password-box input{flex:1;min-width:0}
+.password-box button{margin:0;min-width:48px}
+.login-card .login-btn{width:100%;margin:22px 0 0;padding:13px;background:#8065f5;font-size:16px}
+#loginError{color:#ff687a;text-align:center;font-size:13px;margin-top:12px;min-height:18px}
+#logoutBtn{background:#a63d50;float:right}
+@media(max-width:750px){main{padding:10px}.editor-layout{grid-template-columns:1fr}#content{min-height:280px}.controls{grid-template-columns:repeat(2,minmax(0,1fr))}.panel{padding:14px}}
+@media(max-width:380px){.controls{grid-template-columns:1fr}}
+
+/* FLOATING LIVE PREVIEW WHILE EDITING SETTINGS */
+#livePreviewDock{display:none;position:fixed;z-index:9999;top:82px;right:16px;width:min(360px,38vw);padding:10px;background:#171b28;border:1px solid #6556a8;border-radius:12px;box-shadow:0 12px 35px #000b}
+#livePreviewDock .dock-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;color:#d7d0ff;font-size:12px;font-weight:bold}
+#livePreviewDock .dock-head button{margin:0;padding:5px 9px;font-size:11px}
+#livePreviewDock #preview{width:100%;max-width:100%;margin:0;}
+#livePreviewPlaceholder{width:100%;display:block;}
+#livePreviewDock.is-collapsed{width:auto;padding:6px}
+#livePreviewDock.is-collapsed #preview,#livePreviewDock.is-collapsed .dock-head span{display:none}
+#livePreviewDock.is-collapsed .dock-head{margin:0}
+@media(max-width:750px){
+ #livePreviewDock{top:auto;right:8px;bottom:10px;width:min(250px,48vw);padding:7px}
+ #livePreviewDock .dock-head{font-size:10px;margin-bottom:5px}
+ #livePreviewDock .dock-head button{padding:4px 7px}
+}
+
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN: shown first -->
+<div id="loginScreen">
+ <div class="login-card">
+  <h2>✦ ScrollVideo Studio PRO</h2>
+  <p>Private Admin Login</p>
+  <form id="loginForm">
+   <label for="loginUser">User ID</label>
+   <input type="text" id="loginUser" placeholder="Enter User ID" autocomplete="username" required>
+   <label for="loginPassword">Password</label>
+   <div class="password-box">
+    <input type="password" id="loginPassword" placeholder="Enter Password" autocomplete="current-password" required>
+    <button type="button" class="secondary" id="togglePassword" aria-label="Show or hide password">👁️</button>
+   </div>
+   <button type="submit" class="login-btn">LOGIN</button>
+   <div id="loginError" role="alert"></div>
+  </form>
+ </div>
+</div>
+
+<!-- YOUR VIDEO STUDIO -->
+<div id="appShell" style="display:none">
+<header>
+<h2>✦ ScrollVideo Studio PRO</h2>
+<p>Professional Scrolling Text Video Creator</p>
+<button id="logoutBtn" onclick="adminLogout()">Logout</button>
+<div style="clear:both"></div>
+</header>
+
+<main>
+<section class="panel">
+<div class="editor-layout">
+<div class="editor-box">
+<h3>1. Enter Your Text</h3>
+<textarea id="content" placeholder="Write or paste your text here...">Welcome to my YouTube channel!
+
+Thank you for watching.
+
+Please Like, Share and Subscribe!</textarea>
+<div class="counter" id="counter">0 Characters | 0 Words</div>
+<div class="row">
+<button class="secondary" onclick="clearText()">Clear Text</button>
+<button class="secondary" onclick="pasteText()">Paste Text</button>
+</div>
+<hr class="section-divider">
+<h3>Text Settings</h3>
+<div class="controls">
+<div><label>Font Size</label><input type="number" id="fontSize" value="30" min="12" max="150"></div>
+<div><label>Font Family</label><select id="fontFamily">
+<option value="Arial, sans-serif">Arial</option><option value="'Hind Siliguri', sans-serif">Hind Siliguri</option><option value="'Noto Sans Bengali', sans-serif">Noto Sans Bengali</option><option value="'Noto Sans Devanagari', sans-serif">Noto Sans Devanagari</option><option value="Georgia, serif">Georgia</option><option value="Verdana, sans-serif">Verdana</option>
+</select></div>
+<div><label>Text Colour</label><input type="color" id="textColor" value="#ffffff"></div>
+<div><label>Text Alignment</label><select id="alignment"><option value="center">Center</option><option value="left">Left</option><option value="right">Right</option></select></div>
+<div><label>Text Weight</label><select id="fontWeight"><option value="normal">Normal</option><option value="bold">Bold</option></select></div>
+<div><label>Text Shadow</label><select id="shadow"><option value="yes">Enabled</option><option value="no">Disabled</option></select></div>
+<div><label>Text Width (%)</label><input type="range" id="textWidth" min="40" max="100" value="84"></div>
+<div><label>Line Spacing</label><input type="number" id="lineSpacing" min="1" max="3" step=".1" value="1.6"></div>
+<div><label>Scroll Speed</label><input type="range" id="speed" min="10" max="150" value="45"><div class="note">Speed control for scrolling text</div></div>
+</div>
+</div>
+
+<div class="editor-box">
+<h3>2. Live Preview</h3>
+<div id="preview">
+<img id="bgImage" alt="Background">
+<video id="bgVideo" muted loop playsinline></video>
+<div id="scrollText"></div>
+<img id="logoPreview" alt="Logo">
+<div id="watermarkPreview"></div>
+<div id="subscribePreview">
+ <div class="subscribe-card">
+  <div class="subscribe-title">Thanks For Watching!</div>
+  <div class="subscribe-button">▶ SUBSCRIBE</div>
+  <div class="subscribe-icons">👍 &nbsp; 🔔</div>
+ </div>
+</div>
+</div>
+<div class="timeline">
+ <div class="timeline-top"><strong>VIDEO TIMELINE</strong><span class="timeline-time"><span id="currentTime">00:00</span> / <span id="totalTime">00:00</span></span></div>
+ <input type="range" id="timelineSeek" min="0" max="1000" step="1" value="0" aria-label="Seek video timeline">
+ <div class="timeline-marks"><span id="markStart">00:00</span><span id="markMid">00:00</span><span id="markEnd">00:00</span></div>
+ <div class="duration-settings">
+  <div><label>Duration Mode</label><select id="durationMode"><option value="auto">Automatic (Recommended)</option><option value="custom">Custom Duration</option></select></div>
+  <div><label>Custom Total Duration (Minutes)</label><input type="number" id="customMinutes" min="0" max="240" value="1" step="1" disabled></div>
+  <div><label>Custom Total Duration (Seconds)</label><input type="number" id="customSeconds" min="0" max="59" value="30" step="1" disabled></div>
+  <div class="full note" id="durationHint">Automatic duration: calculated from your text length and Scroll Speed.</div>
+ </div>
+ <div class="transport">
+  <button class="green" onclick="playScroll()">▶ Play</button>
+  <button class="secondary" onclick="pauseScroll()">Ⅱ Pause</button>
+  <button class="red" onclick="resetScroll()">↺ Reset</button>
+ </div>
+</div>
+<p class="note">Drag the timeline slider to jump to any point in your video.</p>
+</div>
+</div>
+</section>
+
+<section class="panel">
+<h3>3. Video Settings</h3>
+<div class="controls">
+<div><label>Starting Position</label><input type="range" id="textPosition" min="10" max="100" value="100"></div>
+<div><label>Video Format</label><select id="format"><option value="16/9">YouTube 16:9</option><option value="9/16">YouTube Shorts 9:16</option><option value="1/1">Square 1:1</option></select></div>
+<div><label>Video Quality</label><select id="quality"><option value="1080">1080p Full HD</option><option value="2160">4K Ultra HD</option></select></div>
+</div>
+</section>
+
+<section class="panel">
+<h3>4. Background Image / Video</h3>
+<div class="controls">
+<div><label>Upload Background Image</label><input type="file" id="imageUpload" accept="image/*"></div>
+<div><label>Upload Background Video</label><input type="file" id="videoUpload" accept="video/*"></div>
+<div><label>Background Colour</label><input type="color" id="bgColor" value="#000000"></div>
+</div>
+<button class="secondary" onclick="removeBackground()">Remove Background</button>
+</section>
+
+<section class="panel">
+<h3>5. Logo & Watermark Settings</h3>
+<div class="adjust-hint">💡 Live Preview-এর মধ্যে Logo বা Watermark-এর উপর আঙুল/মাউস চেপে Drag করে নিজের পছন্দমতো জায়গায় বসান। Position dropdown থেকেও ৯টি জায়গা বেছে নিতে পারবেন।</div>
+<label>Upload Your Channel Logo</label><input type="file" id="logoUpload" accept="image/*">
+<div class="controls">
+<div><label>Logo Position</label><select id="logoPosition">
+<option value="top-left">Top Left</option><option value="top-center">Top Center</option><option value="top-right" selected>Top Right</option>
+<option value="middle-left">Middle Left</option><option value="center">Center</option><option value="middle-right">Middle Right</option>
+<option value="bottom-left">Bottom Left</option><option value="bottom-center">Bottom Center</option><option value="bottom-right">Bottom Right</option><option value="custom">Custom (Drag)</option>
+</select></div>
+<div><label>Logo Size</label><input type="range" id="logoSize" min="30" max="250" value="75"></div>
+<div><label>Logo Opacity</label><input type="range" id="logoOpacity" min="10" max="100" value="100"></div>
+<div><label>Watermark Text</label><input type="text" id="watermarkText" placeholder="Your Channel Name"></div>
+<div><label>Watermark Colour</label><input type="color" id="watermarkColor" value="#ffffff"></div>
+<div><label>Watermark Position</label><select id="watermarkPosition">
+<option value="top-left">Top Left</option><option value="top-center">Top Center</option><option value="top-right">Top Right</option>
+<option value="middle-left">Middle Left</option><option value="center">Center</option><option value="middle-right">Middle Right</option>
+<option value="bottom-left">Bottom Left</option><option value="bottom-center">Bottom Center</option><option value="bottom-right" selected>Bottom Right</option><option value="custom">Custom (Drag)</option>
+</select></div>
+<div><label>Watermark Size</label><input type="range" id="watermarkSize" min="8" max="48" value="16"></div>
+</div>
+</section>
+
+<section class="panel">
+<h3>6. Subscribe Animation</h3>
+<label><input type="checkbox" id="subscribeEnabled" checked> Enable End Screen Subscribe Animation</label>
+<div class="controls">
+<div><label>Subscribe Heading</label><input type="text" id="subscribeHeading" value="Thanks For Watching!"></div>
+<div><label>Subscribe Button Text</label><input type="text" id="subscribeButtonText" value="▶ SUBSCRIBE"></div>
+<div><label>Animation Duration (Seconds)</label><input type="number" id="subscribeDuration" value="4" min="1" max="20"></div>
+<div><label>Button Colour</label><input type="color" id="subscribeColor" value="#e62117"></div>
+</div>
+<p class="note">The Subscribe animation will appear after your scrolling text finishes. It includes Subscribe, Like and Bell symbols.</p>
+<button class="secondary" onclick="testSubscribe()">Preview Subscribe Animation</button>
+</section>
+
+<section class="panel">
+<h3>7. Export Your Video</h3>
+<label>Export Format</label>
+<select id="exportFormat"><option value="auto">Automatic (MP4 if supported, otherwise WebM)</option><option value="mp4">MP4 (if supported)</option><option value="webm">WebM</option></select>
+<button class="green" id="exportButton" onclick="exportVideo()">⬇ Download Video</button>
+<p class="status" id="status">Ready to create your video.</p>
+<p class="note" id="progress"></p>
+</section>
+</main>
+<footer>ScrollVideo Studio PRO | Create Your Own Videos</footer>
+</div>
+
+<script>
+/* ==========================================
+   ADMIN LOGIN SETTINGS
+   CHANGE ONLY THESE TWO VALUES
+========================================== */
+const ADMIN_USER_ID = "Admin2026";       // CHANGE YOUR USER ID HERE
+const ADMIN_PASSWORD = "Studio@2026";   // CHANGE YOUR PASSWORD HERE
+
+const loginScreen=document.getElementById('loginScreen');
+const appShell=document.getElementById('appShell');
+const loginForm=document.getElementById('loginForm');
+const loginError=document.getElementById('loginError');
+
+function openStudio(){loginScreen.style.display='none';appShell.style.display='block';}
+function openLogin(){appShell.style.display='none';loginScreen.style.display='flex';}
+
+if(sessionStorage.getItem('sv_admin_login')==='yes'){openStudio();}else{openLogin();}
+
+loginForm.addEventListener('submit',function(e){
+ e.preventDefault();
+ const user=document.getElementById('loginUser').value.trim();
+ const pass=document.getElementById('loginPassword').value;
+ if(user===ADMIN_USER_ID && pass===ADMIN_PASSWORD){
+  sessionStorage.setItem('sv_admin_login','yes');
+  loginError.textContent='';
+  loginForm.reset();
+  openStudio();
+ }else{
+  loginError.textContent='Incorrect User ID or Password!';
+ }
+});
+
+document.getElementById('togglePassword').addEventListener('click',function(){
+ const p=document.getElementById('loginPassword');
+ if(p.type==='password'){p.type='text';this.textContent='🙈';}
+ else{p.type='password';this.textContent='👁️';}
+});
+
+function adminLogout(){
+ sessionStorage.removeItem('sv_admin_login');
+ loginForm.reset();
+ loginError.textContent='';
+ openLogin();
+}
+
+/* SCROLL VIDEO STUDIO */
+const $=id=>document.getElementById(id);
+const preview=$('preview'),text=$('scrollText'),bgImage=$('bgImage'),bgVideo=$('bgVideo'),logoPreview=$('logoPreview'),subscribePreview=$('subscribePreview');
+let position=0,playing=false,animation=null,lastTime=0,imageURL=null,videoURL=null,logoURL=null,backgroundType='color',exporting=false,previewMode='scroll',timelineElapsed=0,timelineTotal=0,timelineScrollDuration=0;
+
+function updateCounter(){
+ const value=$('content').value,words=value.trim()?value.trim().split(/\s+/).length:0;
+ $('counter').textContent=value.length+' Characters | '+words+' Words';
+}
+function updateTextStyle(){
+ text.textContent=$('content').value;
+ text.style.fontSize=$('fontSize').value+'px';
+ text.style.fontFamily=$('fontFamily').value;
+ text.style.color=$('textColor').value;
+ text.style.textAlign=$('alignment').value;
+ text.style.fontWeight=$('fontWeight').value;
+ text.style.lineHeight=$('lineSpacing').value;
+ const width=Number($('textWidth').value);
+ text.style.width=width+'%';text.style.left=((100-width)/2)+'%';
+ text.style.textShadow=$('shadow').value==='yes'?'0 2px 8px #000':'none';
+ preview.style.background=$('bgColor').value;
+ updateCounter();
+}
+function updatePreview(){preview.style.aspectRatio=$('format').value;updateTextStyle();updateLogo();updateWatermark();resetScroll();}
+function formatTime(seconds){seconds=Math.max(0,Math.floor(seconds||0));const h=Math.floor(seconds/3600),m=Math.floor((seconds%3600)/60),s=seconds%60;return h>0?String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'):String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
+function getSubscribeDuration(){return $('subscribeEnabled').checked?Math.max(1,Math.min(20,Number($('subscribeDuration').value)||4)):0;}
+function getScrollMetrics(){
+ const startY=preview.clientHeight*Number($('textPosition').value)/100;
+ const distance=Math.max(1,startY+text.offsetHeight);
+ const speed=Math.max(1,Number($('speed').value));
+ let scrollSeconds=distance/speed;
+ if($('durationMode').value==='custom'){
+  const requested=Math.max(1,Math.min(14400,(Number($('customMinutes').value)||0)*60+(Number($('customSeconds').value)||0)));
+  scrollSeconds=Math.max(0.5,requested-getSubscribeDuration());
+ }
+ return {startY,distance,scrollSeconds,totalSeconds:scrollSeconds+getSubscribeDuration()};
+}
+function updateTimelineUI(){
+ const m=getScrollMetrics();timelineScrollDuration=m.scrollSeconds;timelineTotal=m.totalSeconds;
+ $('currentTime').textContent=formatTime(timelineElapsed);$('totalTime').textContent=formatTime(timelineTotal);
+ $('timelineSeek').value=String(Math.round((timelineTotal?timelineElapsed/timelineTotal:0)*1000));
+ $('markStart').textContent='00:00';$('markMid').textContent=formatTime(timelineTotal/2);$('markEnd').textContent=formatTime(timelineTotal);
+ $('customMinutes').disabled=$('durationMode').value!=='custom';$('customSeconds').disabled=$('durationMode').value!=='custom';
+ $('durationHint').textContent=$('durationMode').value==='auto'?'Automatic duration: calculated from your text length and Scroll Speed.':'Custom total duration includes the Subscribe end screen, if enabled.';
+}
+function renderAtTime(seconds){
+ const m=getScrollMetrics();timelineScrollDuration=m.scrollSeconds;timelineTotal=m.totalSeconds;
+ timelineElapsed=Math.max(0,Math.min(seconds,timelineTotal));
+ if(timelineElapsed<timelineScrollDuration||!$('subscribeEnabled').checked){
+  previewMode='scroll';subscribePreview.classList.remove('show');
+  position=m.startY-m.distance*(timelineScrollDuration?timelineElapsed/timelineScrollDuration:0);
+  text.style.top=position+'px';
+ }else{
+  position=-text.offsetHeight;text.style.top=position+'px';
+  if(previewMode!=='subscribe'){
+   previewMode='subscribe';
+   $('subscribePreview').querySelector('.subscribe-title').textContent=$('subscribeHeading').value;
+   $('subscribePreview').querySelector('.subscribe-button').textContent=$('subscribeButtonText').value;
+   $('subscribePreview').querySelector('.subscribe-button').style.background=$('subscribeColor').value;
+   subscribePreview.classList.remove('show');void subscribePreview.offsetWidth;subscribePreview.classList.add('show');
+  }
+ }
+ updateTimelineUI();
+}
+function resetScroll(){pauseScroll();previewMode='scroll';subscribePreview.classList.remove('show');timelineElapsed=0;const m=getScrollMetrics();position=m.startY;text.style.top=position+'px';updateTimelineUI();}
+function playScroll(){
+ if(playing||exporting)return;
+ const m=getScrollMetrics();if(timelineElapsed>=m.totalSeconds)timelineElapsed=0;
+ playing=true;lastTime=0;if(backgroundType==='video')bgVideo.play().catch(()=>{});
+ function frame(time){
+  if(!playing)return;
+  if(lastTime){timelineElapsed+=(time-lastTime)/1000;const total=getScrollMetrics().totalSeconds;
+   if(timelineElapsed>=total){renderAtTime(total);pauseScroll();return;}
+   renderAtTime(timelineElapsed);
+  }
+  lastTime=time;animation=requestAnimationFrame(frame);
+ }
+ animation=requestAnimationFrame(frame);
+}
+function pauseScroll(){playing=false;cancelAnimationFrame(animation);lastTime=0;if(backgroundType==='video')bgVideo.pause();}
+function showSubscribePreview(){
+ if(!$('subscribeEnabled').checked)return;
+ previewMode='subscribe';$('subscribePreview').querySelector('.subscribe-title').textContent=$('subscribeHeading').value;
+ $('subscribePreview').querySelector('.subscribe-button').textContent=$('subscribeButtonText').value;
+ $('subscribePreview').querySelector('.subscribe-button').style.background=$('subscribeColor').value;
+ subscribePreview.classList.remove('show');void subscribePreview.offsetWidth;subscribePreview.classList.add('show');
+}
+function testSubscribe(){pauseScroll();position=preview.clientHeight+100;text.style.top=position+'px';showSubscribePreview();}
+$('timelineSeek').addEventListener('input',function(){pauseScroll();renderAtTime(Number(this.value)/1000*getScrollMetrics().totalSeconds);});
+['durationMode','customMinutes','customSeconds','subscribeEnabled','subscribeDuration','speed','textPosition'].forEach(id=>{$(id).addEventListener('input',()=>{if(id==='durationMode')resetScroll();else{const old=timelineElapsed;updateTimelineUI();renderAtTime(Math.min(old,timelineTotal));}});$(id).addEventListener('change',()=>{if(id==='durationMode')resetScroll();else{const old=timelineElapsed;updateTimelineUI();renderAtTime(Math.min(old,timelineTotal));}});});
+
+$('logoUpload').addEventListener('change',function(e){
+ const file=e.target.files[0];if(!file)return;
+ if(!file.type.startsWith('image/')){alert('Please select an image.');return;}
+ if(logoURL)URL.revokeObjectURL(logoURL);
+ logoURL=URL.createObjectURL(file);logoPreview.src=logoURL;logoPreview.style.display='block';updateLogo();
+});
+let logoPoint={x:.88,y:.12},watermarkPoint={x:.82,y:.94};
+function clampPoint(point,el){
+ const r=preview.getBoundingClientRect(),w=el.offsetWidth,h=el.offsetHeight;
+ const minX=w/(2*r.width),maxX=1-minX,minY=h/(2*r.height),maxY=1-minY;
+ point.x=Math.max(minX,Math.min(maxX,point.x));point.y=Math.max(minY,Math.min(maxY,point.y));
+}
+function applyPoint(el,point){
+ clampPoint(point,el);const r=preview.getBoundingClientRect();
+ el.style.left=(point.x*r.width-el.offsetWidth/2)+'px';el.style.top=(point.y*r.height-el.offsetHeight/2)+'px';
+ el.style.right='auto';el.style.bottom='auto';
+}
+function presetPoint(value){
+ const map={'top-left':[.08,.12],'top-center':[.5,.12],'top-right':[.92,.12],
+ 'middle-left':[.08,.5],'center':[.5,.5],'middle-right':[.92,.5],
+ 'bottom-left':[.08,.88],'bottom-center':[.5,.88],'bottom-right':[.92,.88]};
+ return map[value]||null;
+}
+function updateLogo(){
+ if(!logoURL)return;const size=Number($('logoSize').value);
+ logoPreview.style.width=size+'px';logoPreview.style.height=size+'px';
+ logoPreview.style.opacity=Number($('logoOpacity').value)/100;applyPoint(logoPreview,logoPoint);
+}
+function updateWatermark(){
+ const wm=$('watermarkPreview');wm.textContent=$('watermarkText').value;
+ wm.style.color=$('watermarkColor').value;wm.style.fontSize=Number($('watermarkSize').value)+'px';
+ applyPoint(wm,watermarkPoint);
+}
+function setLogoPreset(){const p=presetPoint($('logoPosition').value);if(p){logoPoint={x:p[0],y:p[1]};updateLogo();}}
+function setWatermarkPreset(){const p=presetPoint($('watermarkPosition').value);if(p){watermarkPoint={x:p[0],y:p[1]};updateWatermark();}}
+function enableDrag(el,setPoint,selectId,update){
+ let dragging=false;
+ el.addEventListener('pointerdown',function(e){
+  if(el===logoPreview&&!logoURL)return;
+  if(el===watermarkPreview&&!$('watermarkText').value.trim())return;
+  dragging=true;el.setPointerCapture(e.pointerId);e.preventDefault();
+ });
+ el.addEventListener('pointermove',function(e){if(!dragging)return;
+  const r=preview.getBoundingClientRect();setPoint({x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height});
+  update();$(selectId).value='custom';
+ });
+ const stop=()=>{dragging=false;};el.addEventListener('pointerup',stop);el.addEventListener('pointercancel',stop);
+}
+enableDrag(logoPreview,p=>{logoPoint=p;},'logoPosition',updateLogo);
+enableDrag(watermarkPreview,p=>{watermarkPoint=p;},'watermarkPosition',updateWatermark);
+$('logoPosition').addEventListener('change',setLogoPreset);
+$('watermarkPosition').addEventListener('change',setWatermarkPreset);
+window.addEventListener('resize',()=>{if(logoURL)updateLogo();updateWatermark();});
+$('imageUpload').addEventListener('change',function(e){
+ const file=e.target.files[0];if(!file)return;
+ if(!file.type.startsWith('image/')){alert('Please select an image.');return;}
+ if(imageURL)URL.revokeObjectURL(imageURL);imageURL=URL.createObjectURL(file);
+ bgVideo.pause();bgVideo.style.display='none';bgImage.src=imageURL;bgImage.style.display='block';backgroundType='image';
+});
+$('videoUpload').addEventListener('change',function(e){
+ const file=e.target.files[0];if(!file)return;
+ if(!file.type.startsWith('video/')){alert('Please select a video.');return;}
+ if(videoURL)URL.revokeObjectURL(videoURL);videoURL=URL.createObjectURL(file);
+ bgImage.style.display='none';bgVideo.src=videoURL;bgVideo.style.display='block';bgVideo.load();backgroundType='video';bgVideo.play().catch(()=>{});
+});
+function removeBackground(){
+ pauseScroll();bgImage.style.display='none';bgVideo.pause();bgVideo.removeAttribute('src');bgVideo.load();bgVideo.style.display='none';
+ backgroundType='color';$('imageUpload').value='';$('videoUpload').value='';
+ if(imageURL){URL.revokeObjectURL(imageURL);imageURL=null;}if(videoURL){URL.revokeObjectURL(videoURL);videoURL=null;}
+}
+['content','fontSize','fontFamily','textColor','alignment','fontWeight','shadow','textWidth','lineSpacing','bgColor'].forEach(id=>{$(id).addEventListener('input',()=>{updateTextStyle();resetScroll();});$(id).addEventListener('change',()=>{updateTextStyle();resetScroll();});});
+['logoSize','logoOpacity'].forEach(id=>{$(id).addEventListener('input',updateLogo);$(id).addEventListener('change',updateLogo);});
+['watermarkText','watermarkColor','watermarkSize'].forEach(id=>{$(id).addEventListener('input',updateWatermark);$(id).addEventListener('change',updateWatermark);});
+$('format').addEventListener('change',updatePreview);
+function clearText(){$('content').value='';updateTextStyle();resetScroll();}
+async function pasteText(){try{$('content').value=await navigator.clipboard.readText();updateTextStyle();resetScroll();}catch(e){alert('Clipboard access not available. Please paste manually.');}}
+async function waitForFonts(){if(document.fonts)await document.fonts.ready;}
+function drawBackground(ctx,w,h){
+ ctx.fillStyle=$('bgColor').value;ctx.fillRect(0,0,w,h);let source=null;
+ if(backgroundType==='image'&&bgImage.complete)source=bgImage;
+ if(backgroundType==='video'&&bgVideo.readyState>=2)source=bgVideo;
+ if(source){const sw=source.videoWidth||source.naturalWidth,sh=source.videoHeight||source.naturalHeight;if(!sw||!sh)return;
+ const scale=Math.max(w/sw,h/sh),dw=sw*scale,dh=sh*scale;ctx.drawImage(source,(w-dw)/2,(h-dh)/2,dw,dh);}
+}
+function getLines(ctx,value,maxWidth){
+ const result=[];value.split('\n').forEach(paragraph=>{
+  if(paragraph===''){result.push('');return;}const chars=Array.from(paragraph);let line='';
+  chars.forEach(char=>{const test=line+char;if(ctx.measureText(test).width>maxWidth&&line){result.push(line);line=char;}else{line=test;}});result.push(line);
+ });return result;
+}
+function drawLogo(ctx,w,h){
+ if(!logoURL||!logoPreview.complete||!logoPreview.naturalWidth)return;
+ const size=Number($('logoSize').value)*w/preview.clientWidth;
+ const x=logoPoint.x*w-size/2,y=logoPoint.y*h-size/2;
+ ctx.save();ctx.globalAlpha=Number($('logoOpacity').value)/100;ctx.drawImage(logoPreview,x,y,size,size);ctx.restore();
+}
+function drawWatermark(ctx,w,h){
+ const value=$('watermarkText').value;if(!value)return;const scale=w/preview.clientWidth;
+ ctx.save();ctx.font='bold '+(Number($('watermarkSize').value)*scale)+'px Arial';ctx.fillStyle=$('watermarkColor').value;ctx.textBaseline='middle';ctx.textAlign='center';ctx.shadowColor='#000';ctx.shadowBlur=4*scale;
+ const x=watermarkPoint.x*w,y=watermarkPoint.y*h;ctx.fillText(value,x,y);ctx.restore();
+}
+function drawSubscribe(ctx,w,h,time){
+ const scale=w/1080,progress=Math.min(1,time/.7),opacity=progress,zoom=.75+(.25*progress);
+ ctx.save();ctx.globalAlpha=opacity;ctx.translate(w/2,h/2);ctx.scale(zoom,zoom);
+ const boxW=w*.82,boxH=155*scale,x=-boxW/2,y=-boxH/2,radius=18*scale;
+ ctx.fillStyle='rgba(0,0,0,.86)';ctx.beginPath();ctx.roundRect(x,y,boxW,boxH,radius);ctx.fill();
+ ctx.strokeStyle='rgba(255,255,255,.25)';ctx.lineWidth=2*scale;ctx.stroke();
+ ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#fff';ctx.font='bold '+(30*scale)+'px Arial';
+ ctx.fillText($('subscribeHeading').value,0,-38*scale);
+ const buttonW=boxW*.65,buttonH=48*scale;ctx.fillStyle=$('subscribeColor').value;ctx.beginPath();ctx.roundRect(-buttonW/2,-buttonH/2+12*scale,buttonW,buttonH,10*scale);ctx.fill();
+ ctx.fillStyle='#fff';ctx.font='bold '+(23*scale)+'px Arial';ctx.fillText($('subscribeButtonText').value,0,12*scale);
+ ctx.font=(26*scale)+'px Arial';ctx.fillText('👍     🔔',0,65*scale);ctx.restore();
+}
+async function exportVideo(){
+ if(exporting)return;pauseScroll();const status=$('status'),progress=$('progress'),button=$('exportButton');
+ if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){status.textContent='Video recording not supported.';return;}
+ exporting=true;button.disabled=true;let recorder=null,stream=null,raf=0,timer=null;
+ try{
+  status.textContent='Preparing video...';progress.textContent='Loading fonts and background...';await waitForFonts();
+  if(backgroundType==='image'&&!bgImage.complete)await new Promise((resolve,reject)=>{bgImage.onload=resolve;bgImage.onerror=reject;});
+  if(backgroundType==='video'&&bgVideo.readyState<2)await new Promise((resolve,reject)=>{bgVideo.addEventListener('loadeddata',resolve,{once:true});bgVideo.addEventListener('error',reject,{once:true});});
+  const ratio=$('format').value.split('/'),quality=Number($('quality').value),w=quality,h=Math.round(w*Number(ratio[1])/Number(ratio[0]));
+  const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d'),fps=30;stream=canvas.captureStream(fps);
+  const requested=$('exportFormat').value,mp4=['video/mp4;codecs=avc1.42E01E','video/mp4'],webm=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+  let mime;if(requested==='mp4')mime=mp4.find(t=>MediaRecorder.isTypeSupported(t));else if(requested==='webm')mime=webm.find(t=>MediaRecorder.isTypeSupported(t));else mime=[...mp4,...webm].find(t=>MediaRecorder.isTypeSupported(t));
+  if(!mime)throw new Error('Video format not supported. Select Automatic or WebM.');
+  recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:quality===2160?18000000:8000000});const chunks=[];
+  const fontSize=Number($('fontSize').value)*w/preview.clientWidth,lineHeight=fontSize*Number($('lineSpacing').value),maxWidth=w*Number($('textWidth').value)/100,left=(w-maxWidth)/2;
+  ctx.font=$('fontWeight').value+' '+fontSize+'px '+$('fontFamily').value;const lines=getLines(ctx,$('content').value,maxWidth),totalHeight=lines.length*lineHeight,align=$('alignment').value;
+  const textX=align==='left'?left:align==='right'?w-left:w/2;let y=h*Number($('textPosition').value)/100;
+  const subscribeOn=$('subscribeEnabled').checked;
+  const subscribeDuration=subscribeOn?Math.max(1,Math.min(20,Number($('subscribeDuration').value)||4)):0;
+  const requestedTotal=$('durationMode').value==='custom'?Math.max(1,Math.min(14400,(Number($('customMinutes').value)||0)*60+(Number($('customSeconds').value)||0))):null;
+  const scrollDuration=requestedTotal===null?Math.max(0.5,(y+totalHeight+lineHeight)/(Number($('speed').value)*w/preview.clientWidth)):Math.max(0.5,requestedTotal-subscribeDuration);
+  const speed=(y+totalHeight+lineHeight)/scrollDuration;
+  const totalDuration=scrollDuration+subscribeDuration;
+  let started=false,stopped=false,startTime=0;
+  function cleanup(){cancelAnimationFrame(raf);if(timer)clearTimeout(timer);if(stream)stream.getTracks().forEach(t=>t.stop());if(backgroundType==='video')bgVideo.pause();}
+  recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
+  recorder.onstop=()=>{
+   cleanup();const blob=new Blob(chunks,{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');
+   a.href=url;a.download='ScrollVideo.'+(mime.includes('mp4')?'mp4':'webm');document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+   status.textContent='Video Downloaded Successfully!';progress.textContent=quality+'p | '+(mime.includes('mp4')?'MP4':'WebM');exporting=false;button.disabled=false;
+  };
+  function drawFrame(time){
+   if(stopped)return;if(!started){started=true;startTime=time;}const elapsed=(time-startTime)/1000;drawBackground(ctx,w,h);
+   if(elapsed<scrollDuration){
+    const currentY=h*Number($('textPosition').value)/100-speed*elapsed;ctx.save();ctx.beginPath();ctx.rect(0,0,w,h);ctx.clip();
+    ctx.font=$('fontWeight').value+' '+fontSize+'px '+$('fontFamily').value;ctx.fillStyle=$('textColor').value;ctx.textAlign=align;ctx.textBaseline='top';
+    if($('shadow').value==='yes'){ctx.shadowColor='#000';ctx.shadowBlur=8*w/1080;}
+    lines.forEach((line,i)=>ctx.fillText(line,textX,currentY+i*lineHeight,maxWidth));ctx.restore();
+   }else if(subscribeOn){drawSubscribe(ctx,w,h,elapsed-scrollDuration);}
+   drawLogo(ctx,w,h);drawWatermark(ctx,w,h);
+   const percent=Math.min(100,Math.round(elapsed/totalDuration*100));progress.textContent='Rendering Video: '+percent+'%';
+   if(elapsed<totalDuration)raf=requestAnimationFrame(drawFrame);else{stopped=true;if(recorder.state==='recording')recorder.stop();}
+  }
+  status.textContent='Recording video...';recorder.start(1000);if(backgroundType==='video')bgVideo.play().catch(()=>{});raf=requestAnimationFrame(drawFrame);
+  timer=setTimeout(()=>{if(!stopped){stopped=true;if(recorder.state==='recording')recorder.stop();}},Math.ceil(totalDuration*1000)+5000);
+ }catch(error){
+  console.error(error);if(stream)stream.getTracks().forEach(t=>t.stop());status.textContent='Error: '+error.message;
+  progress.textContent='Try again with 1080p or WebM.';exporting=false;button.disabled=false;
+ }
+}
+
+
+/* Keep the real Live Preview visible while scrolling through settings.
+   The preview is moved into a small floating dock; the original editor
+   and preview design are otherwise left unchanged. */
+(function setupFloatingLivePreview(){
+ const dock=document.createElement('div');
+ dock.id='livePreviewDock';
+ dock.innerHTML='<div class="dock-head"><span>LIVE PREVIEW</span><button type="button" id="previewDockToggle" class="secondary">Minimize</button></div>';
+ document.body.appendChild(dock);
+ const previewElement=document.getElementById('preview');
+ if(!previewElement)return;
+ const placeholder=document.createElement('div');
+ placeholder.id='livePreviewPlaceholder';
+ let previewThreshold=null;
+ let moved=false,collapsed=false,originalParent=null,originalNext=null;
+ function measureThreshold(){
+  if(moved)return;
+  const rect=previewElement.getBoundingClientRect();
+  if(rect.height>0)previewThreshold=rect.top+window.scrollY+rect.height;
+ }
+ function moveIntoDock(){
+  if(moved)return;
+  originalParent=previewElement.parentNode;
+  originalNext=previewElement.nextSibling;
+  const rect=previewElement.getBoundingClientRect();
+  placeholder.style.height=rect.height+'px';
+  placeholder.style.aspectRatio=getComputedStyle(previewElement).aspectRatio;
+  originalParent.insertBefore(placeholder,previewElement);
+  dock.appendChild(previewElement);
+  dock.style.display='block';moved=true;
+ }
+ function moveBack(){
+  if(!moved)return;
+  if(originalParent){
+   if(placeholder.parentNode===originalParent)originalParent.insertBefore(previewElement,placeholder.nextSibling);
+   else if(originalNext&&originalNext.parentNode===originalParent)originalParent.insertBefore(previewElement,originalNext);
+   else originalParent.appendChild(previewElement);
+  }
+  placeholder.remove();dock.style.display='none';dock.classList.remove('is-collapsed');
+  const toggle=document.getElementById('previewDockToggle');if(toggle)toggle.textContent='Minimize';
+  collapsed=false;moved=false;
+ }
+ function checkPosition(){
+  const shell=document.getElementById('appShell');
+  if(!shell||getComputedStyle(shell).display==='none')return;
+  if(previewThreshold===null)measureThreshold();
+  if(previewThreshold===null)return;
+  if(!moved && window.scrollY>previewThreshold+20)moveIntoDock();
+  else if(moved && window.scrollY<previewThreshold-80)moveBack();
+ }
+ document.getElementById('previewDockToggle').addEventListener('click',function(){
+  collapsed=!collapsed;dock.classList.toggle('is-collapsed',collapsed);this.textContent=collapsed?'Show Preview':'Minimize';
+ });
+ window.addEventListener('scroll',checkPosition,{passive:true});
+ window.addEventListener('resize',()=>{if(moved)placeholder.style.height=previewElement.getBoundingClientRect().height+'px';else measureThreshold();checkPosition();});
+ const shell=document.getElementById('appShell');
+ if(shell){const shellObserver=new MutationObserver(()=>{if(getComputedStyle(shell).display!=='none')requestAnimationFrame(()=>{measureThreshold();checkPosition();});});shellObserver.observe(shell,{attributes:true,attributeFilter:['style']});}
+ const observer=new MutationObserver(()=>{if(moved)placeholder.style.aspectRatio=getComputedStyle(previewElement).aspectRatio;});
+ observer.observe(previewElement,{attributes:true,attributeFilter:['style']});
+})();
+
+/* INITIALIZE */
+updatePreview();
+updateTimelineUI();
+</script>
+</body>
+</html>
