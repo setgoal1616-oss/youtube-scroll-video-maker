@@ -17,10 +17,104 @@ body{
  font-family:Arial,sans-serif;
 }
 
+/* LOGIN SCREEN */
+#loginScreen{
+ min-height:100vh;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ padding:20px;
+ background:linear-gradient(135deg,#0b0d14,#19152d);
+}
+
+.login-box{
+ width:100%;
+ max-width:390px;
+ padding:30px 24px;
+ background:#171b28;
+ border:1px solid #39334f;
+ border-radius:18px;
+ box-shadow:0 15px 45px rgba(0,0,0,.4);
+}
+
+.login-box h2{
+ text-align:center;
+ color:#a995ff;
+ margin:0 0 8px;
+ font-size:25px;
+}
+
+.login-box p{
+ text-align:center;
+ color:#aaa;
+ font-size:13px;
+ margin:0 0 25px;
+}
+
+.login-box label{
+ display:block;
+ margin:15px 0 7px;
+ color:#c8c8d2;
+ font-size:13px;
+}
+
+.login-box input{
+ width:100%;
+ padding:13px;
+ border-radius:8px;
+ border:1px solid #363c50;
+ background:#0d111d;
+ color:white;
+ outline:none;
+ font-size:15px;
+}
+
+.password-wrap{
+ display:flex;
+ gap:7px;
+}
+
+.password-wrap input{
+ flex:1;
+ min-width:0;
+}
+
+.password-wrap button{
+ margin:0;
+ padding:10px 12px;
+ background:#34394b;
+}
+
+.login-button{
+ width:100%;
+ margin:22px 0 0;
+ padding:13px;
+ background:#8065f5;
+ font-size:15px;
+}
+
+#loginError{
+ color:#ff707e;
+ font-size:13px;
+ text-align:center;
+ margin-top:13px;
+ min-height:18px;
+}
+
+/* MAIN APP */
+#appShell{
+ display:none;
+}
+
 header{
  padding:18px 22px;
  background:#151824;
  border-bottom:1px solid #292d3b;
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ gap:12px;
+ flex-wrap:wrap;
 }
 
 header h2{
@@ -33,6 +127,11 @@ header p{
  color:#aaa;
  margin:7px 0 0;
  font-size:13px;
+}
+
+.logout-button{
+ background:#a63d50;
+ margin:0;
 }
 
 main{
@@ -117,9 +216,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
  align-items:start;
 }
 
-.editor-box{
- min-width:0;
-}
+.editor-box{min-width:0}
 
 #content{
  min-height:360px;
@@ -295,21 +392,10 @@ footer{
 }
 
 @media(max-width:750px){
-
  main{padding:10px}
-
- .editor-layout{
-  grid-template-columns:1fr;
- }
-
- #content{
-  min-height:280px;
- }
-
- .controls{
-  grid-template-columns:repeat(2,minmax(0,1fr));
- }
-
+ .editor-layout{grid-template-columns:1fr}
+ #content{min-height:280px}
+ .controls{grid-template-columns:repeat(2,minmax(0,1fr))}
  .panel{padding:14px}
 }
 
@@ -321,21 +407,44 @@ footer{
 
 <body>
 
+<!-- ADMIN LOGIN -->
+<div id="loginScreen">
+ <div class="login-box">
+  <h2>✦ ScrollVideo Studio PRO</h2>
+  <p>Admin Login Only</p>
+
+  <label>User ID</label>
+  <input type="text" id="loginUser" placeholder="Enter Admin User ID" autocomplete="username">
+
+  <label>Password</label>
+  <div class="password-wrap">
+   <input type="password" id="loginPass" placeholder="Enter Password" autocomplete="current-password">
+   <button type="button" onclick="togglePassword()" id="eyeButton">Show</button>
+  </div>
+
+  <button class="login-button" onclick="login()">LOGIN</button>
+  <div id="loginError"></div>
+ </div>
+</div>
+
+
+<!-- MAIN APPLICATION -->
+<div id="appShell">
+
 <header>
-<h2>✦ ScrollVideo Studio PRO</h2>
-<p>Professional Scrolling Text Video Creator</p>
+ <div>
+  <h2>✦ ScrollVideo Studio PRO</h2>
+  <p>Professional Scrolling Text Video Creator</p>
+ </div>
+ <button class="logout-button" onclick="logout()">Logout</button>
 </header>
 
 <main>
 
-<!-- TEXT EDITOR + LIVE PREVIEW -->
-
 <section class="panel">
-
 <div class="editor-layout">
 
 <div class="editor-box">
-
 <h3>1. Enter Your Text</h3>
 
 <textarea id="content" placeholder="Write or paste your text here...">Welcome to my YouTube channel!
@@ -415,26 +524,16 @@ Please Like, Share and Subscribe!</textarea>
 </div>
 
 </div>
-
 </div>
 
-
-<!-- LIVE PREVIEW -->
-
 <div class="editor-box">
-
 <h3>2. Live Preview</h3>
 
 <div id="preview">
-
 <img id="bgImage" alt="Background">
-
 <video id="bgVideo" muted loop playsinline></video>
-
 <div id="scrollText"></div>
-
 <img id="logoPreview" alt="Logo">
-
 <div id="watermarkPreview"></div>
 
 <div id="subscribePreview">
@@ -444,7 +543,6 @@ Please Like, Share and Subscribe!</textarea>
 <div class="subscribe-icons">👍 &nbsp; 🔔</div>
 </div>
 </div>
-
 </div>
 
 <div class="row">
@@ -454,22 +552,15 @@ Please Like, Share and Subscribe!</textarea>
 </div>
 
 <p class="note">Your text changes automatically in the live preview.</p>
-
 </div>
-
 </div>
-
 </section>
 
 
-<!-- SCROLL SETTINGS -->
-
 <section class="panel">
-
 <h3>3. Scroll & Video Settings</h3>
 
 <div class="controls">
-
 <div>
 <label>Scroll Speed</label>
 <input type="range" id="speed" min="10" max="150" value="45">
@@ -496,20 +587,14 @@ Please Like, Share and Subscribe!</textarea>
 <option value="2160">4K Ultra HD</option>
 </select>
 </div>
-
 </div>
-
 </section>
 
 
-<!-- BACKGROUND -->
-
 <section class="panel">
-
 <h3>4. Background Image / Video</h3>
 
 <div class="controls">
-
 <div>
 <label>Upload Background Image</label>
 <input type="file" id="imageUpload" accept="image/*">
@@ -524,25 +609,19 @@ Please Like, Share and Subscribe!</textarea>
 <label>Background Colour</label>
 <input type="color" id="bgColor" value="#000000">
 </div>
-
 </div>
 
 <button class="secondary" onclick="removeBackground()">Remove Background</button>
-
 </section>
 
 
-<!-- LOGO AND WATERMARK -->
-
 <section class="panel">
-
 <h3>5. Logo & Watermark Settings</h3>
 
 <label>Upload Your Channel Logo</label>
 <input type="file" id="logoUpload" accept="image/*">
 
 <div class="controls">
-
 <div>
 <label>Logo Position</label>
 <select id="logoPosition">
@@ -582,16 +661,11 @@ Please Like, Share and Subscribe!</textarea>
 <option value="top-left">Top Left</option>
 </select>
 </div>
-
 </div>
-
 </section>
 
 
-<!-- SUBSCRIBE ANIMATION -->
-
 <section class="panel">
-
 <h3>6. Subscribe Animation</h3>
 
 <label>
@@ -600,7 +674,6 @@ Please Like, Share and Subscribe!</textarea>
 </label>
 
 <div class="controls">
-
 <div>
 <label>Subscribe Heading</label>
 <input type="text" id="subscribeHeading" value="Thanks For Watching!">
@@ -620,7 +693,6 @@ Please Like, Share and Subscribe!</textarea>
 <label>Button Colour</label>
 <input type="color" id="subscribeColor" value="#e62117">
 </div>
-
 </div>
 
 <p class="note">
@@ -629,18 +701,13 @@ It includes Subscribe, Like and Bell symbols.
 </p>
 
 <button class="secondary" onclick="testSubscribe()">Preview Subscribe Animation</button>
-
 </section>
 
 
-<!-- EXPORT -->
-
 <section class="panel">
-
 <h3>7. Export Your Video</h3>
 
 <label>Export Format</label>
-
 <select id="exportFormat">
 <option value="auto">Automatic (MP4 if supported, otherwise WebM)</option>
 <option value="mp4">MP4 (if supported)</option>
@@ -653,7 +720,6 @@ It includes Subscribe, Like and Bell symbols.
 
 <p class="status" id="status">Ready to create your video.</p>
 <p class="note" id="progress"></p>
-
 </section>
 
 </main>
@@ -662,8 +728,85 @@ It includes Subscribe, Like and Bell symbols.
 ScrollVideo Studio PRO | Create Your Own Videos
 </footer>
 
+</div>
+
 
 <script>
+
+/* =========================================
+   ADMIN LOGIN SETTINGS
+   CHANGE YOUR USER ID AND PASSWORD HERE
+========================================= */
+
+const ADMIN_USER_ID = "Admin2026";
+const ADMIN_PASSWORD = "Deb@11";
+
+
+/* LOGIN FUNCTIONS */
+
+function togglePassword(){
+ const field=document.getElementById('loginPass');
+ const button=document.getElementById('eyeButton');
+
+ if(field.type==='password'){
+  field.type='text';
+  button.textContent='Hide';
+ }else{
+  field.type='password';
+  button.textContent='Show';
+ }
+}
+
+function login(){
+
+ const user=document.getElementById('loginUser').value.trim();
+ const pass=document.getElementById('loginPass').value;
+ const error=document.getElementById('loginError');
+
+ if(user===ADMIN_USER_ID && pass===ADMIN_PASSWORD){
+
+  sessionStorage.setItem('scrollStudioLoggedIn','true');
+
+  error.textContent='';
+
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('appShell').style.display='block';
+
+  updatePreview();
+
+ }else{
+
+  error.textContent='Incorrect User ID or Password!';
+
+ }
+
+}
+
+function logout(){
+
+ pauseScroll();
+
+ sessionStorage.removeItem('scrollStudioLoggedIn');
+
+ document.getElementById('appShell').style.display='none';
+ document.getElementById('loginScreen').style.display='flex';
+
+ document.getElementById('loginUser').value='';
+ document.getElementById('loginPass').value='';
+ document.getElementById('loginError').textContent='';
+
+}
+
+document.getElementById('loginPass').addEventListener('keydown',function(e){
+ if(e.key==='Enter')login();
+});
+
+document.getElementById('loginUser').addEventListener('keydown',function(e){
+ if(e.key==='Enter')login();
+});
+
+
+/* REST OF STUDIO CODE */
 
 const $=id=>document.getElementById(id);
 
@@ -688,8 +831,6 @@ let exporting=false;
 let previewMode='scroll';
 
 
-// TEXT COUNTER
-
 function updateCounter(){
 
  const value=$('content').value;
@@ -702,8 +843,6 @@ function updateCounter(){
 
 }
 
-
-// TEXT STYLE
 
 function updateTextStyle(){
 
@@ -733,8 +872,6 @@ function updateTextStyle(){
 }
 
 
-// UPDATE PREVIEW
-
 function updatePreview(){
 
  preview.style.aspectRatio=$('format').value;
@@ -749,8 +886,6 @@ function updatePreview(){
 
 }
 
-
-// RESET
 
 function resetScroll(){
 
@@ -767,8 +902,6 @@ function resetScroll(){
 
 }
 
-
-// PLAY
 
 function playScroll(){
 
@@ -819,8 +952,6 @@ function playScroll(){
 }
 
 
-// PAUSE
-
 function pauseScroll(){
 
  playing=false;
@@ -835,8 +966,6 @@ function pauseScroll(){
 
 }
 
-
-// SUBSCRIBE PREVIEW
 
 function showSubscribePreview(){
 
@@ -875,7 +1004,7 @@ function testSubscribe(){
 }
 
 
-// LOGO UPLOAD
+/* LOGO */
 
 $('logoUpload').addEventListener('change',function(e){
 
@@ -929,7 +1058,7 @@ function updateLogo(){
 }
 
 
-// WATERMARK
+/* WATERMARK */
 
 function updateWatermark(){
 
@@ -950,7 +1079,7 @@ function updateWatermark(){
 }
 
 
-// BACKGROUND IMAGE
+/* BACKGROUND IMAGE */
 
 $('imageUpload').addEventListener('change',function(e){
 
@@ -978,7 +1107,7 @@ $('imageUpload').addEventListener('change',function(e){
 });
 
 
-// BACKGROUND VIDEO
+/* BACKGROUND VIDEO */
 
 $('videoUpload').addEventListener('change',function(e){
 
@@ -1009,8 +1138,6 @@ $('videoUpload').addEventListener('change',function(e){
 });
 
 
-// REMOVE BACKGROUND
-
 function removeBackground(){
 
  pauseScroll();
@@ -1040,7 +1167,7 @@ function removeBackground(){
 }
 
 
-// AUTO UPDATE
+/* AUTO UPDATE */
 
 [
  'content','fontSize','fontFamily','textColor',
@@ -1076,7 +1203,7 @@ $('format').addEventListener('change',updatePreview);
 $('textPosition').addEventListener('input',resetScroll);
 
 
-// CLEAR AND PASTE
+/* CLEAR AND PASTE */
 
 function clearText(){
 
@@ -1109,7 +1236,7 @@ async function pasteText(){
 }
 
 
-// WAIT FOR FONTS
+/* WAIT FOR FONTS */
 
 async function waitForFonts(){
 
@@ -1120,7 +1247,7 @@ async function waitForFonts(){
 }
 
 
-// DRAW BACKGROUND
+/* DRAW BACKGROUND */
 
 function drawBackground(ctx,w,h){
 
@@ -1162,7 +1289,7 @@ function drawBackground(ctx,w,h){
 }
 
 
-// WRAP TEXT
+/* WRAP TEXT */
 
 function getLines(ctx,value,maxWidth){
 
@@ -1204,7 +1331,7 @@ function getLines(ctx,value,maxWidth){
 }
 
 
-// DRAW LOGO
+/* DRAW LOGO */
 
 function drawLogo(ctx,w,h){
 
@@ -1231,7 +1358,7 @@ function drawLogo(ctx,w,h){
 }
 
 
-// DRAW WATERMARK
+/* DRAW WATERMARK */
 
 function drawWatermark(ctx,w,h){
 
@@ -1268,7 +1395,7 @@ function drawWatermark(ctx,w,h){
 }
 
 
-// DRAW SUBSCRIBE SCREEN
+/* DRAW SUBSCRIBE SCREEN */
 
 function drawSubscribe(ctx,w,h,time){
 
@@ -1355,7 +1482,7 @@ function drawSubscribe(ctx,w,h,time){
 }
 
 
-// EXPORT VIDEO
+/* EXPORT VIDEO */
 
 async function exportVideo(){
 
@@ -1719,9 +1846,16 @@ async function exportVideo(){
 }
 
 
-// INITIALIZE
+/* INITIALIZE */
 
 updatePreview();
+
+/* RESTORE LOGIN FOR CURRENT TAB SESSION */
+
+if(sessionStorage.getItem('scrollStudioLoggedIn')==='true'){
+ document.getElementById('loginScreen').style.display='none';
+ document.getElementById('appShell').style.display='block';
+}
 
 </script>
 
