@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ScrollVideo Studio</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101116;color:#fff;font-family:Arial,sans-serif}
+header{padding:20px;background:#191a22;border-bottom:1px solid #30313a}
+header h2{margin:0;color:#9b87ff}
+main{max-width:1100px;margin:auto;padding:20px}
+.panel{background:#1b1c25;padding:20px;border-radius:14px;margin-bottom:18px}
+label{display:block;margin:14px 0 7px;color:#ccc}
+textarea,input,select{width:100%;padding:12px;border-radius:8px;border:1px solid #393a46;background:#11121a;color:white}
+button{padding:12px 18px;border:0;border-radius:8px;background:#8065f5;color:white;font-weight:bold;cursor:pointer;margin:5px 3px}
+button:hover{background:#6549d8}
+#preview{margin:15px auto;background:#000;color:white;overflow:hidden;position:relative;width:100%;max-width:700px;aspect-ratio:16/9}
+#scrollText{position:absolute;top:100%;left:8%;width:84%;text-align:center;white-space:pre-wrap;font-size:30px;line-height:1.6}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.note{color:#aaa;font-size:13px}
+</style>
+</head>
+<body>
+<header><h2>✦ ScrollVideo Studio</h2>
+<p>Scrolling Text Video Maker</p></header>
+<main>
+<section class="panel">
+<h3>1. Enter Your Text</h3>
+<textarea id="content" rows="6" placeholder="Write or paste your text here...">Welcome to my YouTube channel!
+
+Thank you for watching.
+
+Please Like, Share and Subscribe!</textarea>
+<div class="controls">
+<div><label>Font size</label><input id="fontSize" type="number" value="30" min="12" max="100"></div>
+<div><label>Scroll speed</label><input id="speed" type="range" min="10" max="150" value="45"></div>
+<div><label>Text color</label><input id="textColor" type="color" value="#ffffff"></div>
+<div><label>Background</label><input id="bgColor" type="color" value="#000000"></div>
+<div><label>Video format</label>
+<select id="format">
+<option value="16/9">YouTube 16:9</option>
+<option value="9/16">YouTube Shorts 9:16</option>
+<option value="1/1">Square 1:1</option>
+</select></div>
+</div>
+<button onclick="updatePreview()">Update Preview</button>
+<button onclick="playScroll()">▶ Play</button>
+<button onclick="pauseScroll()">Ⅱ Pause</button>
+<button onclick="resetScroll()">↺ Reset</button>
+</section>
+<section class="panel">
+<h3>2. Live Preview</h3>
+<div id="preview"><div id="scrollText"></div></div>
+<p class="note">Preview your scrolling text before exporting.</p>
+<button onclick="exportVideo()">⬇ Download MP4</button>
+<p class="note" id="status">Ready to create your video.</p>
+</section>
+</main>
+<script>
+const preview=document.getElementById('preview');
+const text=document.getElementById('scrollText');
+let position=0,playing=false,animation=null,lastTime=0;
+function updatePreview(){
+const format=document.getElementById('format').value;
+preview.style.aspectRatio=format;
+text.textContent=document.getElementById('content').value;
+text.style.fontSize=document.getElementById('fontSize').value+'px';
+text.style.color=document.getElementById('textColor').value;
+preview.style.background=document.getElementById('bgColor').value;
+resetScroll();
+}
+function resetScroll(){
+pauseScroll();position=preview.clientHeight;
+text.style.top=position+'px';
+}
+function playScroll(){
+if(playing)return;
+playing=true;lastTime=0;
+function frame(time){
+if(!playing)return;
+if(lastTime){
+position-=(time-lastTime)*Number(document.getElementById('speed').value)/1000;
+text.style.top=position+'px';
+if(position+text.offsetHeight<0){playing=false;return;}
+}
+lastTime=time;
+animation=requestAnimationFrame(frame);
+}
+animation=requestAnimationFrame(frame);
+}
+function pauseScroll(){
+playing=false;
+cancelAnimationFrame(animation);
+lastTime=0;
+}
+async function exportVideo(){
+pauseScroll();
+const status=document.getElementById('status');
+if(!window.MediaRecorder || !preview.captureStream){
+status.textContent='Video recording is not supported in this browser.';
+return;
+}
+status.textContent='Preparing video...';
+const canvas=document.createElement('canvas');
+const format=document.getElementById('format').value;
+const ratio=format.split('/');
+const w=1080,h=Math.round(w*Number(ratio[1])/Number(ratio[0]));
+canvas.width=w;canvas.height=h;
+const ctx=canvas.getContext('2d');
+const stream=canvas.captureStream(30);
+const mime=['video/mp4;codecs=avc1','video/webm;codecs=vp9','video/webm']
+.find(x=>MediaRecorder.isTypeSupported(x));
+if(!mime){status.textContent='Video recording is not supported.';return;}
+const recorder=new MediaRecorder(stream,{mimeType:mime});
+const chunks=[];
+recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+recorder.onstop=()=>{
+const blob=new Blob(chunks,{type:mime});
+const url=URL.createObjectURL(blob);
+const a=document.createElement('a');
+a.href=url;
+a.download='scrollvideo.'+(mime.includes('mp4')?'mp4':'webm');
+a.click();
+URL.revokeObjectURL(url);
+status.textContent='Video downloaded!';
+};
+recorder.start();
+const lines=document.getElementById('content').value;
+const font=Number(document.getElementById('fontSize').value)*w/preview.clientWidth;
+let y=h;
+const speed=Number(document.getElementById('speed').value)*w/preview.clientWidth;
+const lineHeight=font*1.6;
+const allLines=lines.split('\n');
+const draw=()=>{
+ctx.fillStyle=document.getElementById('bgColor').value;
+ctx.fillRect(0,0,w,h);
+ctx.fillStyle=document.getElementById('textColor').value;
+ctx.font=font+'px Arial';
+ctx.textAlign='center';
+allLines.forEach((line,i)=>ctx.fillText(line,w/2,y+i*lineHeight,w*.85));
+y-=speed/30;
+if(y+allLines.length*lineHeight>-lineHeight){
+requestAnimationFrame(draw);
+}else{
+recorder.stop();
+stream.getTracks().forEach(t=>t.stop());
+}
+};
+draw();
+}
+updatePreview();
+</script>
+</body>
+</html>
