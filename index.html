@@ -253,6 +253,7 @@ Please Like, Share and Subscribe!</textarea>
 <button class="green" id="exportButton" onclick="exportVideo()">⬇ Download Video</button>
 <p class="status" id="status">Ready to create your video.</p>
 <p class="note" id="progress"></p>
+<p class="note" id="fileSize">Last Export File Size: Not available yet</p>
 </section>
 </main>
 <footer>ScrollVideo Studio PRO | Create Your Own Videos</footer>
@@ -264,7 +265,7 @@ Please Like, Share and Subscribe!</textarea>
    CHANGE ONLY THESE TWO VALUES
 ========================================== */
 const ADMIN_USER_ID = "Admin2026";       // CHANGE YOUR USER ID HERE
-const ADMIN_PASSWORD = "Deb@11";   // CHANGE YOUR PASSWORD HERE
+const ADMIN_PASSWORD = "Studio@2026";   // CHANGE YOUR PASSWORD HERE
 
 const loginScreen=document.getElementById('loginScreen');
 const appShell=document.getElementById('appShell');
@@ -510,7 +511,7 @@ function drawSubscribe(ctx,w,h,time){
 async function exportVideo(){
  if(exporting)return;pauseScroll();const status=$('status'),progress=$('progress'),button=$('exportButton');
  if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){status.textContent='Video recording not supported.';return;}
- exporting=true;button.disabled=true;let recorder=null,stream=null,raf=0,timer=null;
+ exporting=true;button.disabled=true;let recorder=null,stream=null,raf=0,visibilityHandler=null;
  try{
   status.textContent='Preparing video...';progress.textContent='Loading fonts and background...';await waitForFonts();
   if(backgroundType==='image'&&!bgImage.complete)await new Promise((resolve,reject)=>{bgImage.onload=resolve;bgImage.onerror=reject;});
@@ -524,37 +525,68 @@ async function exportVideo(){
   const fontSize=Number($('fontSize').value)*w/preview.clientWidth,lineHeight=fontSize*Number($('lineSpacing').value),maxWidth=w*Number($('textWidth').value)/100,left=(w-maxWidth)/2;
   ctx.font=$('fontWeight').value+' '+fontSize+'px '+$('fontFamily').value;const lines=getLines(ctx,$('content').value,maxWidth),totalHeight=lines.length*lineHeight,align=$('alignment').value;
   const textX=align==='left'?left:align==='right'?w-left:w/2;let y=h*Number($('textPosition').value)/100;
+  const textLayer=document.createElement('canvas');textLayer.width=w;textLayer.height=Math.max(1,Math.ceil(totalHeight+lineHeight));
+  const textCtx=textLayer.getContext('2d');textCtx.font=$('fontWeight').value+' '+fontSize+'px '+$('fontFamily').value;
+  textCtx.fillStyle=$('textColor').value;textCtx.textAlign=align;textCtx.textBaseline='top';
+  if($('shadow').value==='yes'){textCtx.shadowColor='#000';textCtx.shadowBlur=8*w/1080;}
+  lines.forEach((line,i)=>textCtx.fillText(line,textX,i*lineHeight,maxWidth));
   const subscribeOn=$('subscribeEnabled').checked;
   const subscribeDuration=subscribeOn?Math.max(1,Math.min(20,Number($('subscribeDuration').value)||4)):0;
   const requestedTotal=$('durationMode').value==='custom'?Math.max(1,Math.min(14400,(Number($('customMinutes').value)||0)*60+(Number($('customSeconds').value)||0))):null;
   const scrollDuration=requestedTotal===null?Math.max(0.5,(y+totalHeight+lineHeight)/(Number($('speed').value)*w/preview.clientWidth)):Math.max(0.5,requestedTotal-subscribeDuration);
   const speed=(y+totalHeight+lineHeight)/scrollDuration;
   const totalDuration=scrollDuration+subscribeDuration;
-  let started=false,stopped=false,startTime=0;
-  function cleanup(){cancelAnimationFrame(raf);if(timer)clearTimeout(timer);if(stream)stream.getTracks().forEach(t=>t.stop());if(backgroundType==='video')bgVideo.pause();}
+  let started=false,stopped=false,startTime=0,pausedAt=0;
+  function cleanup(){
+   cancelAnimationFrame(raf);
+   document.removeEventListener('visibilitychange',visibilityHandler);
+   if(stream)stream.getTracks().forEach(t=>t.stop());
+   if(backgroundType==='video')bgVideo.pause();
+  }
   recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
   recorder.onstop=()=>{
    cleanup();const blob=new Blob(chunks,{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');
    a.href=url;a.download='ScrollVideo.'+(mime.includes('mp4')?'mp4':'webm');document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
-   status.textContent='Video Downloaded Successfully!';progress.textContent=quality+'p | '+(mime.includes('mp4')?'MP4':'WebM');exporting=false;button.disabled=false;
+   const sizeBytes=blob.size;
+   const sizeText=sizeBytes>=1024*1024*1024?(sizeBytes/(1024*1024*1024)).toFixed(2)+' GB':sizeBytes>=1024*1024?(sizeBytes/(1024*1024)).toFixed(2)+' MB':(sizeBytes/1024).toFixed(1)+' KB';
+   $('fileSize').textContent='Actual Video File Size: '+sizeText+' ('+sizeBytes.toLocaleString()+' bytes) | '+quality+'p | '+(mime.includes('mp4')?'MP4':'WebM');
+   status.textContent='Video Downloaded Successfully!';progress.textContent=quality+'p | '+(mime.includes('mp4')?'MP4':'WebM')+' | Background switching pauses export safely';exporting=false;button.disabled=false;
   };
-  function drawFrame(time){
-   if(stopped)return;if(!started){started=true;startTime=time;}const elapsed=(time-startTime)/1000;drawBackground(ctx,w,h);
+  function drawFrame(){
+   if(stopped||document.hidden)return;
+   const now=performance.now();if(!started){started=true;startTime=now;}
+   const elapsed=(now-startTime)/1000;drawBackground(ctx,w,h);
    if(elapsed<scrollDuration){
     const currentY=h*Number($('textPosition').value)/100-speed*elapsed;ctx.save();ctx.beginPath();ctx.rect(0,0,w,h);ctx.clip();
-    ctx.font=$('fontWeight').value+' '+fontSize+'px '+$('fontFamily').value;ctx.fillStyle=$('textColor').value;ctx.textAlign=align;ctx.textBaseline='top';
-    if($('shadow').value==='yes'){ctx.shadowColor='#000';ctx.shadowBlur=8*w/1080;}
-    lines.forEach((line,i)=>ctx.fillText(line,textX,currentY+i*lineHeight,maxWidth));ctx.restore();
+    ctx.drawImage(textLayer,0,currentY);ctx.restore();
    }else if(subscribeOn){drawSubscribe(ctx,w,h,elapsed-scrollDuration);}
    drawLogo(ctx,w,h);drawWatermark(ctx,w,h);
    const percent=Math.min(100,Math.round(elapsed/totalDuration*100));progress.textContent='Rendering Video: '+percent+'%';
-   if(elapsed<totalDuration)raf=requestAnimationFrame(drawFrame);else{stopped=true;if(recorder.state==='recording')recorder.stop();}
+   if(elapsed<totalDuration)raf=requestAnimationFrame(drawFrame);
+   else{stopped=true;if(recorder.state!=='inactive')recorder.stop();}
   }
-  status.textContent='Recording video...';recorder.start(1000);if(backgroundType==='video')bgVideo.play().catch(()=>{});raf=requestAnimationFrame(drawFrame);
-  timer=setTimeout(()=>{if(!stopped){stopped=true;if(recorder.state==='recording')recorder.stop();}},Math.ceil(totalDuration*1000)+5000);
+  visibilityHandler=function(){
+   if(!recorder||stopped)return;
+   if(document.hidden){
+    if(recorder.state==='recording'){
+     pausedAt=performance.now();recorder.pause();cancelAnimationFrame(raf);
+     if(backgroundType==='video')bgVideo.pause();
+     status.textContent='Export paused while you use another app. Return to this page to continue.';
+     progress.textContent='Your video will resume automatically when you return.';
+    }
+   }else if(recorder.state==='paused'){
+    const now=performance.now();if(started&&pausedAt)startTime+=now-pausedAt;pausedAt=0;
+    recorder.resume();
+    if(backgroundType==='video')bgVideo.play().catch(()=>{});
+    status.textContent='Export resumed...';raf=requestAnimationFrame(drawFrame);
+   }
+  };
+  document.addEventListener('visibilitychange',visibilityHandler);
+  status.textContent='Recording video...';progress.textContent='Keep this page open. Switching apps will pause export and resume when you return.';
+  recorder.start(1000);if(backgroundType==='video')bgVideo.play().catch(()=>{});raf=requestAnimationFrame(drawFrame);
  }catch(error){
-  console.error(error);if(stream)stream.getTracks().forEach(t=>t.stop());status.textContent='Error: '+error.message;
-  progress.textContent='Try again with 1080p or WebM.';exporting=false;button.disabled=false;
+  console.error(error);if(stream)stream.getTracks().forEach(t=>t.stop());if(recorder&&recorder.state!=='inactive'){try{recorder.stop();}catch(e){}}
+  status.textContent='Error: '+error.message;progress.textContent='Try again with 1080p or WebM.';exporting=false;button.disabled=false;
  }
 }
 
