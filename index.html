@@ -291,7 +291,7 @@ Please Like, Share and Subscribe!</textarea>
    CHANGE ONLY THESE TWO VALUES
 ========================================== */
 const ADMIN_USER_ID = "Admin2026";       // CHANGE YOUR USER ID HERE
-const ADMIN_PASSWORD = "Deb@";   // CHANGE YOUR PASSWORD HERE
+const ADMIN_PASSWORD = "Studio@2026";   // CHANGE YOUR PASSWORD HERE
 
 const loginScreen=document.getElementById('loginScreen');
 const appShell=document.getElementById('appShell');
@@ -627,28 +627,35 @@ async function exportVideo(){
   if(!mime)throw new Error('Video format not supported. Select Automatic or WebM.');
   recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:quality===2160?35000000:16000000});exportRecorder=recorder;const chunks=[];
   const previewWidth=preview.getBoundingClientRect().width||360,scale=w/previewWidth;
-  // Use the same font and browser-measured DOM line fragments as Live Preview.
+  // Build the export text layer from the same browser HTML text layout.
+  // Canvas fillText reshapes Bengali conjuncts/matras differently from DOM
+  // text and can cause missing, clipped or jittering glyphs. SVG foreignObject
+  // lets the browser rasterize the actual HTML/CSS text as one stable bitmap.
   const computedText=getComputedStyle(text);
-  const fontSize=Math.max(1,parseFloat(computedText.fontSize)*scale);
-  const align=computedText.textAlign;
-  ctx.font=`${computedText.fontWeight} ${fontSize}px ${computedText.fontFamily}`;
-  const lines=getPreviewLineLayout(scale);
   const textRect=text.getBoundingClientRect(),previewRect=preview.getBoundingClientRect();
-  const cssLeft=(textRect.left-previewRect.left)*scale,cssWidth=textRect.width*scale;
-  const textX=align==='left'?cssLeft:align==='right'?cssLeft+cssWidth:cssLeft+cssWidth/2;
-  const textColor=computedText.color,textShadow=$('shadow').value==='yes',subscribeOn=$('subscribeEnabled').checked;
-  // Rasterize the complete text layout once. Repainting Bengali glyphs at
-  // fractional Y coordinates on every frame causes visible matra/ligature jitter.
-  // Moving this fixed bitmap by whole output pixels keeps glyph edges stable.
+  const cssLeft=(textRect.left-previewRect.left)*scale;
+  const cssWidth=textRect.width*scale;
+  const layerHeight=Math.max(1,Math.ceil(textRect.height*scale+8*scale));
+  const textColor=computedText.color;
+  const textShadow=$('shadow').value==='yes';
+  const subscribeOn=$('subscribeEnabled').checked;
   const textLayer=document.createElement('canvas');
   textLayer.width=w;
-  const maxLineBottom=lines.length?Math.max(...lines.map(line=>line.top))+fontSize*1.8:fontSize*2;
-  textLayer.height=Math.max(1,Math.ceil(maxLineBottom+fontSize));
+  textLayer.height=layerHeight;
   const textLayerCtx=textLayer.getContext('2d');
-  textLayerCtx.font=`${computedText.fontWeight} ${fontSize}px ${computedText.fontFamily}`;
-  textLayerCtx.fillStyle=textColor;textLayerCtx.textAlign=align;textLayerCtx.textBaseline='top';
-  if(textShadow){textLayerCtx.shadowColor='#000';textLayerCtx.shadowBlur=8*scale;textLayerCtx.shadowOffsetX=0;textLayerCtx.shadowOffsetY=2*scale;}
-  lines.forEach(line=>textLayerCtx.fillText(line.text,textX,Math.round(line.top)));
+  const escapeHtml=value=>String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const lineHeight=computedText.lineHeight==='normal'?'normal':(parseFloat(computedText.lineHeight)*scale+'px');
+  const shadowCss=textShadow?`text-shadow:0 ${2*scale}px ${8*scale}px #000;`:'text-shadow:none;';
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xhtml="http://www.w3.org/1999/xhtml" width="${w}" height="${layerHeight}"><foreignObject x="0" y="0" width="${w}" height="${layerHeight}"><xhtml:div xmlns="http://www.w3.org/1999/xhtml" style="position:relative;box-sizing:border-box;margin:0;padding:0;left:${cssLeft}px;width:${cssWidth}px;white-space:pre-wrap;overflow-wrap:anywhere;text-align:${computedText.textAlign};font-family:${escapeHtml(computedText.fontFamily)};font-size:${parseFloat(computedText.fontSize)*scale}px;font-weight:${computedText.fontWeight};font-style:${computedText.fontStyle};line-height:${lineHeight};letter-spacing:${parseFloat(computedText.letterSpacing)||0}px;color:${textColor};${shadowCss}">${escapeHtml($('content').value).replace(/\n/g,'&#10;')}</xhtml:div></foreignObject></svg>`;
+  const svgBlob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});
+  const svgUrl=URL.createObjectURL(svgBlob);
+  const textImage=new Image();
+  try {
+    await new Promise((resolve,reject)=>{textImage.onload=resolve;textImage.onerror=reject;textImage.src=svgUrl;});
+    textLayerCtx.drawImage(textImage,0,0,w,layerHeight);
+  } finally {
+    URL.revokeObjectURL(svgUrl);
+  }
   const subscribeDuration=subscribeOn?Math.max(1,Math.min(20,Number($('subscribeDuration').value)||4)):0;
   const previewMetrics=getScrollMetrics();
   const scrollDuration=Math.max(.5,previewMetrics.scrollSeconds);
