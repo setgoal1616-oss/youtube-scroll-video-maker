@@ -291,7 +291,7 @@ Please Like, Share and Subscribe!</textarea>
    CHANGE ONLY THESE TWO VALUES
 ========================================== */
 const ADMIN_USER_ID = "Admin2026";       // CHANGE YOUR USER ID HERE
-const ADMIN_PASSWORD = "Deb@11";   // CHANGE YOUR PASSWORD HERE
+const ADMIN_PASSWORD = "Studio@2026";   // CHANGE YOUR PASSWORD HERE
 
 const loginScreen=document.getElementById('loginScreen');
 const appShell=document.getElementById('appShell');
@@ -631,6 +631,18 @@ async function exportVideo(){
   const cssLeft=(textRect.left-previewRect.left)*scale,cssWidth=textRect.width*scale;
   const textX=align==='left'?cssLeft:align==='right'?cssLeft+cssWidth:cssLeft+cssWidth/2;
   const textColor=computedText.color,textShadow=$('shadow').value==='yes',subscribeOn=$('subscribeEnabled').checked;
+  // Rasterize the complete text layout once. Repainting Bengali glyphs at
+  // fractional Y coordinates on every frame causes visible matra/ligature jitter.
+  // Moving this fixed bitmap by whole output pixels keeps glyph edges stable.
+  const textLayer=document.createElement('canvas');
+  textLayer.width=w;
+  const maxLineBottom=lines.length?Math.max(...lines.map(line=>line.top))+fontSize*1.8:fontSize*2;
+  textLayer.height=Math.max(1,Math.ceil(maxLineBottom+fontSize));
+  const textLayerCtx=textLayer.getContext('2d');
+  textLayerCtx.font=`${computedText.fontWeight} ${fontSize}px ${computedText.fontFamily}`;
+  textLayerCtx.fillStyle=textColor;textLayerCtx.textAlign=align;textLayerCtx.textBaseline='top';
+  if(textShadow){textLayerCtx.shadowColor='#000';textLayerCtx.shadowBlur=8*scale;textLayerCtx.shadowOffsetX=0;textLayerCtx.shadowOffsetY=2*scale;}
+  lines.forEach(line=>textLayerCtx.fillText(line.text,textX,Math.round(line.top)));
   const subscribeDuration=subscribeOn?Math.max(1,Math.min(20,Number($('subscribeDuration').value)||4)):0;
   const previewMetrics=getScrollMetrics();
   const scrollDuration=Math.max(.5,previewMetrics.scrollSeconds);
@@ -653,7 +665,7 @@ async function exportVideo(){
    if(stopped||document.hidden||recorder.state!=='recording')return;
    const now=performance.now();if(!started){started=true;startTime=now;exportStarted=true;exportStartTime=now;}
    const elapsed=(now-startTime)/1000;drawBackground(ctx,w,h);
-   if(elapsed<scrollDuration){const currentY=y-speed*elapsed;ctx.save();ctx.beginPath();ctx.rect(0,0,w,h);ctx.clip();ctx.font=`${computedText.fontWeight} ${fontSize}px ${computedText.fontFamily}`;ctx.fillStyle=textColor;ctx.textAlign=align;ctx.textBaseline='top';if(textShadow){ctx.shadowColor='#000';ctx.shadowBlur=8*scale;ctx.shadowOffsetX=0;ctx.shadowOffsetY=2*scale;}lines.forEach(line=>ctx.fillText(line.text,textX,currentY+line.top));ctx.restore();}
+   if(elapsed<scrollDuration){const currentY=y-speed*elapsed;ctx.save();ctx.beginPath();ctx.rect(0,0,w,h);ctx.clip();ctx.drawImage(textLayer,0,Math.round(currentY));ctx.restore();}
    else if(subscribeOn)drawSubscribe(ctx,w,h,elapsed-scrollDuration);
    drawLogo(ctx,w,h);drawWatermark(ctx,w,h);progress.textContent='Rendering Video: '+Math.min(100,Math.round(elapsed/totalDuration*100))+'%';
    if(elapsed<totalDuration)raf=requestAnimationFrame(drawFrame);else{stopped=true;if(recorder.state!=='inactive')recorder.stop();}
