@@ -156,6 +156,7 @@ Please Like, Share and Subscribe!</textarea>
 
 <div class="editor-box">
 <h3>2. Live Preview</h3>
+<div id="previewStage">
 <div id="preview">
 <img id="bgImage" alt="Background">
 <video id="bgVideo" muted loop playsinline></video>
@@ -187,6 +188,7 @@ Please Like, Share and Subscribe!</textarea>
  </div>
 </div>
 <p class="note">Drag the timeline slider to jump to any point in your video.</p>
+</div>
 </div>
 </div>
 </section>
@@ -265,7 +267,7 @@ Please Like, Share and Subscribe!</textarea>
    CHANGE ONLY THESE TWO VALUES
 ========================================== */
 const ADMIN_USER_ID = "Admin2026";       // CHANGE YOUR USER ID HERE
-const ADMIN_PASSWORD = "Deb@11";   // CHANGE YOUR PASSWORD HERE
+const ADMIN_PASSWORD = "Studio@2026";   // CHANGE YOUR PASSWORD HERE
 
 const loginScreen=document.getElementById('loginScreen');
 const appShell=document.getElementById('appShell');
@@ -327,7 +329,7 @@ function updateTextStyle(){
  preview.style.background=$('bgColor').value;
  updateCounter();
 }
-function updatePreview(){preview.style.aspectRatio=$('format').value;updateTextStyle();updateLogo();updateWatermark();resetScroll();}
+function updatePreview(){const savedTime=timelineElapsed;pauseScroll();preview.style.aspectRatio=$('format').value;updateTextStyle();updateLogo();updateWatermark();renderAtTime(Math.min(savedTime,getScrollMetrics().totalSeconds));}
 function formatTime(seconds){seconds=Math.max(0,Math.floor(seconds||0));const h=Math.floor(seconds/3600),m=Math.floor((seconds%3600)/60),s=seconds%60;return h>0?String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'):String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
 function getSubscribeDuration(){return $('subscribeEnabled').checked?Math.max(1,Math.min(20,Number($('subscribeDuration').value)||4)):0;}
 function getScrollMetrics(){
@@ -369,6 +371,8 @@ function renderAtTime(seconds){
  updateTimelineUI();
 }
 function resetScroll(){pauseScroll();previewMode='scroll';subscribePreview.classList.remove('show');timelineElapsed=0;const m=getScrollMetrics();position=m.startY;text.style.top=position+'px';updateTimelineUI();}
+// Keep the playhead at its current time when text or visual settings are edited.
+function refreshAtCurrentTime(){const savedTime=timelineElapsed;pauseScroll();updateTextStyle();renderAtTime(Math.min(savedTime,getScrollMetrics().totalSeconds));}
 function playScroll(){
  if(playing||exporting)return;
  const m=getScrollMetrics();if(timelineElapsed>=m.totalSeconds)timelineElapsed=0;
@@ -465,12 +469,12 @@ function removeBackground(){
  backgroundType='color';$('imageUpload').value='';$('videoUpload').value='';
  if(imageURL){URL.revokeObjectURL(imageURL);imageURL=null;}if(videoURL){URL.revokeObjectURL(videoURL);videoURL=null;}
 }
-['content','fontSize','fontFamily','textColor','alignment','fontWeight','shadow','textWidth','lineSpacing','bgColor'].forEach(id=>{$(id).addEventListener('input',()=>{updateTextStyle();resetScroll();});$(id).addEventListener('change',()=>{updateTextStyle();resetScroll();});});
+['content','fontSize','fontFamily','textColor','alignment','fontWeight','shadow','textWidth','lineSpacing','bgColor'].forEach(id=>{$(id).addEventListener('input',refreshAtCurrentTime);$(id).addEventListener('change',refreshAtCurrentTime);});
 ['logoSize','logoOpacity'].forEach(id=>{$(id).addEventListener('input',updateLogo);$(id).addEventListener('change',updateLogo);});
 ['watermarkText','watermarkColor','watermarkSize'].forEach(id=>{$(id).addEventListener('input',updateWatermark);$(id).addEventListener('change',updateWatermark);});
 $('format').addEventListener('change',updatePreview);
-function clearText(){$('content').value='';updateTextStyle();resetScroll();}
-async function pasteText(){try{$('content').value=await navigator.clipboard.readText();updateTextStyle();resetScroll();}catch(e){alert('Clipboard access not available. Please paste manually.');}}
+function clearText(){$('content').value='';refreshAtCurrentTime();}
+async function pasteText(){try{$('content').value=await navigator.clipboard.readText();refreshAtCurrentTime();}catch(e){alert('Clipboard access not available. Please paste manually.');}}
 async function waitForFonts(){if(document.fonts)await document.fonts.ready;}
 function drawBackground(ctx,w,h){
  ctx.fillStyle=$('bgColor').value;ctx.fillRect(0,0,w,h);let source=null;
@@ -522,14 +526,13 @@ async function exportVideo(){
   let mime;if(requested==='mp4')mime=mp4.find(t=>MediaRecorder.isTypeSupported(t));else if(requested==='webm')mime=webm.find(t=>MediaRecorder.isTypeSupported(t));else mime=[...mp4,...webm].find(t=>MediaRecorder.isTypeSupported(t));
   if(!mime)throw new Error('Video format not supported. Select Automatic or WebM.');
   recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:quality===2160?18000000:8000000});const chunks=[];
-  const fontSize=Number($('fontSize').value)*w/preview.clientWidth,lineHeight=fontSize*Number($('lineSpacing').value),maxWidth=w*Number($('textWidth').value)/100,left=(w-maxWidth)/2;
-  ctx.font=$('fontWeight').value+' '+fontSize+'px '+$('fontFamily').value;const lines=getLines(ctx,$('content').value,maxWidth),totalHeight=lines.length*lineHeight,align=$('alignment').value;
+  const previewWidth=preview.getBoundingClientRect().width||360;
+  const scale=w/previewWidth;
+  const fontSize=Math.max(1,Number($('fontSize').value)*scale),lineHeight=fontSize*Number($('lineSpacing').value),maxWidth=w*Number($('textWidth').value)/100,left=(w-maxWidth)/2;
+  ctx.font=$('fontWeight').value+' '+fontSize+'px '+$('fontFamily').value;
+  const lines=getLines(ctx,$('content').value,maxWidth),totalHeight=Math.max(lineHeight,lines.length*lineHeight),align=$('alignment').value;
   const textX=align==='left'?left:align==='right'?w-left:w/2;let y=h*Number($('textPosition').value)/100;
-  const textLayer=document.createElement('canvas');textLayer.width=w;textLayer.height=Math.max(1,Math.ceil(totalHeight+lineHeight));
-  const textCtx=textLayer.getContext('2d');textCtx.font=$('fontWeight').value+' '+fontSize+'px '+$('fontFamily').value;
-  textCtx.fillStyle=$('textColor').value;textCtx.textAlign=align;textCtx.textBaseline='top';
-  if($('shadow').value==='yes'){textCtx.shadowColor='#000';textCtx.shadowBlur=8*w/1080;}
-  lines.forEach((line,i)=>textCtx.fillText(line,textX,i*lineHeight,maxWidth));
+  const textColor=$('textColor').value,textShadow=$('shadow').value==='yes';
   const subscribeOn=$('subscribeEnabled').checked;
   const subscribeDuration=subscribeOn?Math.max(1,Math.min(20,Number($('subscribeDuration').value)||4)):0;
   const requestedTotal=$('durationMode').value==='custom'?Math.max(1,Math.min(14400,(Number($('customMinutes').value)||0)*60+(Number($('customSeconds').value)||0))):null;
@@ -557,8 +560,13 @@ async function exportVideo(){
    const now=performance.now();if(!started){started=true;startTime=now;}
    const elapsed=(now-startTime)/1000;drawBackground(ctx,w,h);
    if(elapsed<scrollDuration){
-    const currentY=h*Number($('textPosition').value)/100-speed*elapsed;ctx.save();ctx.beginPath();ctx.rect(0,0,w,h);ctx.clip();
-    ctx.drawImage(textLayer,0,currentY);ctx.restore();
+    const currentY=y-speed*elapsed;
+    ctx.save();ctx.beginPath();ctx.rect(0,0,w,h);ctx.clip();
+    ctx.font=$('fontWeight').value+' '+fontSize+'px '+$('fontFamily').value;
+    ctx.fillStyle=textColor;ctx.textAlign=align;ctx.textBaseline='top';
+    if(textShadow){ctx.shadowColor='#000';ctx.shadowBlur=8*scale;ctx.shadowOffsetX=0;ctx.shadowOffsetY=2*scale;}
+    lines.forEach((line,i)=>ctx.fillText(line,textX,currentY+i*lineHeight,maxWidth));
+    ctx.restore();
    }else if(subscribeOn){drawSubscribe(ctx,w,h,elapsed-scrollDuration);}
    drawLogo(ctx,w,h);drawWatermark(ctx,w,h);
    const percent=Math.min(100,Math.round(elapsed/totalDuration*100));progress.textContent='Rendering Video: '+percent+'%';
@@ -599,7 +607,7 @@ async function exportVideo(){
  dock.id='livePreviewDock';
  dock.innerHTML='<div class="dock-head"><span>LIVE PREVIEW</span><button type="button" id="previewDockToggle" class="secondary">Minimize</button></div>';
  document.body.appendChild(dock);
- const previewElement=document.getElementById('preview');
+ const previewElement=document.getElementById('previewStage');
  if(!previewElement)return;
  const placeholder=document.createElement('div');
  placeholder.id='livePreviewPlaceholder';
@@ -616,7 +624,7 @@ async function exportVideo(){
   originalNext=previewElement.nextSibling;
   const rect=previewElement.getBoundingClientRect();
   placeholder.style.height=rect.height+'px';
-  placeholder.style.aspectRatio=getComputedStyle(previewElement).aspectRatio;
+  
   originalParent.insertBefore(placeholder,previewElement);
   dock.appendChild(previewElement);
   dock.style.display='block';moved=true;
@@ -647,8 +655,6 @@ async function exportVideo(){
  window.addEventListener('resize',()=>{if(moved)placeholder.style.height=previewElement.getBoundingClientRect().height+'px';else measureThreshold();checkPosition();});
  const shell=document.getElementById('appShell');
  if(shell){const shellObserver=new MutationObserver(()=>{if(getComputedStyle(shell).display!=='none')requestAnimationFrame(()=>{measureThreshold();checkPosition();});});shellObserver.observe(shell,{attributes:true,attributeFilter:['style']});}
- const observer=new MutationObserver(()=>{if(moved)placeholder.style.aspectRatio=getComputedStyle(previewElement).aspectRatio;});
- observer.observe(previewElement,{attributes:true,attributeFilter:['style']});
 })();
 
 /* INITIALIZE */
