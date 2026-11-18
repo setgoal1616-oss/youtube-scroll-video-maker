@@ -291,7 +291,7 @@ Please Like, Share and Subscribe!</textarea>
    CHANGE ONLY THESE TWO VALUES
 ========================================== */
 const ADMIN_USER_ID = "Admin2026";       // CHANGE YOUR USER ID HERE
-const ADMIN_PASSWORD = "Deb@11";   // CHANGE YOUR PASSWORD HERE
+const ADMIN_PASSWORD = "Studio@2026";   // CHANGE YOUR PASSWORD HERE
 
 const loginScreen=document.getElementById('loginScreen');
 const appShell=document.getElementById('appShell');
@@ -540,6 +540,47 @@ function getLines(ctx,value,maxWidth){
  });
  return result;
 }
+
+function getPreviewLineLayout(scale){
+  // Read the browser's actual DOM line wrapping. Export uses these exact
+  // line fragments instead of independently wrapping text with Canvas.
+  const node=text.firstChild;
+  if(!node || node.nodeType!==Node.TEXT_NODE)return [];
+  const raw=node.nodeValue||'';
+  const segmenter=typeof Intl!=='undefined'&&Intl.Segmenter
+    ? new Intl.Segmenter('bn',{granularity:'grapheme'}) : null;
+  const parts=segmenter
+    ? Array.from(segmenter.segment(raw),x=>({text:x.segment,index:x.index}))
+    : Array.from(raw).map((ch,i)=>({text:ch,index:i}));
+  const textRect=text.getBoundingClientRect();
+  const range=document.createRange();
+  const rows=[];
+  let currentTop=null,currentText='';
+  function pushRow(){
+    if(currentText!=='' || !rows.length) rows.push({text:currentText,top:Math.max(0,(currentTop??textRect.top)-textRect.top)*scale});
+    currentText='';
+  }
+  for(const part of parts){
+    if(part.text==='\n' || part.text==='\r' || part.text==='\r\n'){
+      pushRow();currentTop=null;continue;
+    }
+    range.setStart(node,part.index);
+    range.setEnd(node,part.index+part.text.length);
+    const rects=range.getClientRects();
+    if(!rects.length){currentText+=part.text;continue;}
+    const rect=rects[0];
+    const top=Math.round(rect.top*2)/2;
+    if(currentTop===null)currentTop=top;
+    else if(Math.abs(top-currentTop)>1){
+      pushRow();currentTop=top;
+    }
+    currentText+=part.text;
+  }
+  if(currentText!=='' || !rows.length)pushRow();
+  range.detach?.();
+  return rows;
+}
+
 function drawLogo(ctx,w,h){
  if(!logoURL||!logoPreview.complete||!logoPreview.naturalWidth)return;
  const size=Number($('logoSize').value)*w/preview.clientWidth;
@@ -580,19 +621,22 @@ async function exportVideo(){
   if(!mime)throw new Error('Video format not supported. Select Automatic or WebM.');
   recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:quality===2160?18000000:8000000});exportRecorder=recorder;const chunks=[];
   const previewWidth=preview.getBoundingClientRect().width||360,scale=w/previewWidth;
-  const fontSize=Math.max(1,Number($('fontSize').value)*scale),lineHeight=fontSize*Number($('lineSpacing').value),maxWidth=w*Number($('textWidth').value)/100,left=(w-maxWidth)/2;
-  ctx.font=$('fontWeight').value+' '+fontSize+'px '+$('fontFamily').value;
-  const lines=getLines(ctx,$('content').value,maxWidth),totalHeight=Math.max(lineHeight,lines.length*lineHeight),align=$('alignment').value;
-  const textX=align==='left'?left:align==='right'?w-left:w/2;let y=h*Number($('textPosition').value)/100;
-  const textColor=$('textColor').value,textShadow=$('shadow').value==='yes',subscribeOn=$('subscribeEnabled').checked;
+  // Use the same font and browser-measured DOM line fragments as Live Preview.
+  const computedText=getComputedStyle(text);
+  const fontSize=Math.max(1,parseFloat(computedText.fontSize)*scale);
+  const align=computedText.textAlign;
+  ctx.font=`${computedText.fontWeight} ${fontSize}px ${computedText.fontFamily}`;
+  const lines=getPreviewLineLayout(scale);
+  const textRect=text.getBoundingClientRect(),previewRect=preview.getBoundingClientRect();
+  const cssLeft=(textRect.left-previewRect.left)*scale,cssWidth=textRect.width*scale;
+  const textX=align==='left'?cssLeft:align==='right'?cssLeft+cssWidth:cssLeft+cssWidth/2;
+  const textColor=computedText.color,textShadow=$('shadow').value==='yes',subscribeOn=$('subscribeEnabled').checked;
   const subscribeDuration=subscribeOn?Math.max(1,Math.min(20,Number($('subscribeDuration').value)||4)):0;
-  // Use the exact same scroll duration as Live Preview. Canvas text may wrap
-  // to a slightly different pixel height than DOM text on different devices;
-  // fit the export travel distance into the preview's duration so playback
-  // speed never drifts between preview and the downloaded file.
   const previewMetrics=getScrollMetrics();
   const scrollDuration=Math.max(.5,previewMetrics.scrollSeconds);
-  const exportTravelDistance=y+totalHeight+lineHeight;
+  // Match the DOM preview's exact travel distance and duration.
+  const y=previewMetrics.startY*scale;
+  const exportTravelDistance=previewMetrics.distance*scale;
   const speed=exportTravelDistance/scrollDuration;
   const totalDuration=scrollDuration+subscribeDuration;
   let started=false,stopped=false,startTime=0,pausedAt=0;
@@ -609,7 +653,7 @@ async function exportVideo(){
    if(stopped||document.hidden||recorder.state!=='recording')return;
    const now=performance.now();if(!started){started=true;startTime=now;exportStarted=true;exportStartTime=now;}
    const elapsed=(now-startTime)/1000;drawBackground(ctx,w,h);
-   if(elapsed<scrollDuration){const currentY=y-speed*elapsed;ctx.save();ctx.beginPath();ctx.rect(0,0,w,h);ctx.clip();ctx.font=$('fontWeight').value+' '+fontSize+'px '+$('fontFamily').value;ctx.fillStyle=textColor;ctx.textAlign=align;ctx.textBaseline='top';if(textShadow){ctx.shadowColor='#000';ctx.shadowBlur=8*scale;ctx.shadowOffsetX=0;ctx.shadowOffsetY=2*scale;}lines.forEach((line,i)=>ctx.fillText(line,textX,currentY+i*lineHeight));ctx.restore();}
+   if(elapsed<scrollDuration){const currentY=y-speed*elapsed;ctx.save();ctx.beginPath();ctx.rect(0,0,w,h);ctx.clip();ctx.font=`${computedText.fontWeight} ${fontSize}px ${computedText.fontFamily}`;ctx.fillStyle=textColor;ctx.textAlign=align;ctx.textBaseline='top';if(textShadow){ctx.shadowColor='#000';ctx.shadowBlur=8*scale;ctx.shadowOffsetX=0;ctx.shadowOffsetY=2*scale;}lines.forEach(line=>ctx.fillText(line.text,textX,currentY+line.top));ctx.restore();}
    else if(subscribeOn)drawSubscribe(ctx,w,h,elapsed-scrollDuration);
    drawLogo(ctx,w,h);drawWatermark(ctx,w,h);progress.textContent='Rendering Video: '+Math.min(100,Math.round(elapsed/totalDuration*100))+'%';
    if(elapsed<totalDuration)raf=requestAnimationFrame(drawFrame);else{stopped=true;if(recorder.state!=='inactive')recorder.stop();}
