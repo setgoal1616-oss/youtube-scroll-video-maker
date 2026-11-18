@@ -47,16 +47,22 @@ button:disabled{opacity:.5;cursor:not-allowed}
 @keyframes pulse{50%{transform:scale(1.07)}}
 .subscribe-icons{margin-top:12px;font-size:24px}
 .status{color:#a995ff;font-size:14px;margin-top:12px}
-.timeline{margin-top:14px;padding:13px;background:#0d111d;border:1px solid #30364a;border-radius:10px}
-.timeline-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;color:#d7d2f4}
-.timeline-time{font-variant-numeric:tabular-nums;color:#fff;font-weight:bold}
-#timelineSeek{width:100%;margin:4px 0 8px;accent-color:#8d75ff;cursor:pointer}
-.timeline-marks{display:flex;justify-content:space-between;color:#8991a5;font-size:10px;font-variant-numeric:tabular-nums}
+.timeline{margin-top:9px;padding:10px 12px;background:#0d111d;border:1px solid #30364a;border-radius:10px}
+.timeline-controls{display:flex;align-items:center;gap:10px;min-width:0}
+.timeline-controls button{flex:0 0 auto;margin:0;width:42px;height:38px;padding:0;font-size:18px;border-radius:8px}
+.timeline-time{font-variant-numeric:tabular-nums;color:#fff;font-size:13px;white-space:nowrap}
+#timelineSeek{flex:1;min-width:40px;width:auto;margin:0;accent-color:#8d75ff;cursor:pointer}
+.fullscreen-btn{background:#34394b!important}
 .duration-settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
 .duration-settings .full{grid-column:1/-1}
-.transport{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px}
-.transport button{min-width:78px}
-@media(max-width:380px){.duration-settings{grid-template-columns:1fr}.duration-settings .full{grid-column:auto}}
+.duration-mode-switch{display:flex;gap:7px;margin-top:6px}
+.duration-mode-switch button{flex:1;margin:0;background:#30364a}
+.duration-mode-switch button.active{background:#8065f5;box-shadow:0 0 0 1px #b6a6ff inset}
+.duration-fields{display:none;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.duration-fields.visible{display:grid}
+.export-controls{display:none;gap:8px;flex-wrap:wrap;margin-top:10px}
+.export-controls button{flex:1;min-width:95px;margin:0}
+@media(max-width:380px){.duration-settings{grid-template-columns:1fr}.duration-settings .full{grid-column:auto}.timeline-controls{gap:6px}.timeline-time{font-size:11px}.timeline-controls button{width:36px;height:36px}}
 .section-divider{border:0;border-top:1px solid #30364a;margin:18px 0}
 footer{text-align:center;color:#777;padding:20px;font-size:12px}
 
@@ -172,22 +178,23 @@ Please Like, Share and Subscribe!</textarea>
 </div>
 </div>
 <div class="timeline">
- <div class="timeline-top"><strong>VIDEO TIMELINE</strong><span class="timeline-time"><span id="currentTime">00:00</span> / <span id="totalTime">00:00</span></span></div>
- <input type="range" id="timelineSeek" min="0" max="1000" step="1" value="0" aria-label="Seek video timeline">
- <div class="timeline-marks"><span id="markStart">00:00</span><span id="markMid">00:00</span><span id="markEnd">00:00</span></div>
+ <div class="timeline-controls">
+  <button class="green" id="playPauseBtn" type="button" onclick="togglePlayPause()" aria-label="Play">▶</button>
+  <span class="timeline-time" id="currentTime">00:00</span>
+  <input type="range" id="timelineSeek" min="0" max="1000" step="1" value="0" aria-label="Seek video timeline">
+  <span class="timeline-time" id="totalTime">00:00</span>
+  <button class="fullscreen-btn" type="button" onclick="togglePreviewFullscreen()" aria-label="Fullscreen">⛶</button>
+ </div>
  <div class="duration-settings">
-  <div><label>Duration Mode</label><select id="durationMode"><option value="auto">Automatic (Recommended)</option><option value="custom">Custom Duration</option></select></div>
-  <div><label>Custom Total Duration (Minutes)</label><input type="number" id="customMinutes" min="0" max="240" value="1" step="1" disabled></div>
-  <div><label>Custom Total Duration (Seconds)</label><input type="number" id="customSeconds" min="0" max="59" value="30" step="1" disabled></div>
-  <div class="full note" id="durationHint">Automatic duration: calculated from your text length and Scroll Speed.</div>
+  <div class="full"><label>Video Duration</label><div class="duration-mode-switch"><button type="button" id="autoDurationBtn" class="active" onclick="setDurationMode('auto')">Auto Duration</button><button type="button" id="customDurationBtn" onclick="setDurationMode('custom')">Set Duration</button></div><select id="durationMode" style="display:none"><option value="auto">Automatic</option><option value="custom">Custom</option></select></div>
+  <div class="duration-fields full" id="durationFields">
+   <div><label>Total Minutes</label><input type="number" id="customMinutes" min="0" max="240" value="1" step="1"></div>
+   <div><label>Extra Seconds</label><input type="number" id="customSeconds" min="0" max="59" value="30" step="1"></div>
+  </div>
+  <div class="full note" id="durationHint">Auto duration uses your text length and scroll speed.</div>
  </div>
- <div class="transport">
-  <button class="green" onclick="playScroll()">▶ Play</button>
-  <button class="secondary" onclick="pauseScroll()">Ⅱ Pause</button>
-  <button class="red" onclick="resetScroll()">↺ Reset</button>
- </div>
+ <div class="row" style="margin-top:8px"><button class="secondary" type="button" onclick="resetScroll()">↺ Reset Preview</button></div>
 </div>
-<p class="note">Drag the timeline slider to jump to any point in your video.</p>
 </div>
 </div>
 </div>
@@ -253,6 +260,7 @@ Please Like, Share and Subscribe!</textarea>
 <label>Export Format</label>
 <select id="exportFormat"><option value="auto">Automatic (MP4 if supported, otherwise WebM)</option><option value="mp4">MP4 (if supported)</option><option value="webm">WebM</option></select>
 <button class="green" id="exportButton" onclick="exportVideo()">⬇ Download Video</button>
+<div class="export-controls" id="exportControls"><button class="secondary" id="exportPauseBtn" type="button" onclick="pauseExport()">Ⅱ Pause Export</button><button class="green" id="exportResumeBtn" type="button" onclick="resumeExport()" style="display:none">▶ Resume Export</button><button class="red" type="button" onclick="cancelExport()">✕ Cancel Export</button></div>
 <p class="status" id="status">Ready to create your video.</p>
 <p class="note" id="progress"></p>
 <p class="note" id="fileSize">Last Export File Size: Not available yet</p>
@@ -267,7 +275,7 @@ Please Like, Share and Subscribe!</textarea>
    CHANGE ONLY THESE TWO VALUES
 ========================================== */
 const ADMIN_USER_ID = "Admin2026";       // CHANGE YOUR USER ID HERE
-const ADMIN_PASSWORD = "Deb@11";   // CHANGE YOUR PASSWORD HERE
+const ADMIN_PASSWORD = "Studio@2026";   // CHANGE YOUR PASSWORD HERE
 
 const loginScreen=document.getElementById('loginScreen');
 const appShell=document.getElementById('appShell');
@@ -310,6 +318,7 @@ function adminLogout(){
 const $=id=>document.getElementById(id);
 const preview=$('preview'),text=$('scrollText'),bgImage=$('bgImage'),bgVideo=$('bgVideo'),logoPreview=$('logoPreview'),subscribePreview=$('subscribePreview');
 let position=0,playing=false,animation=null,lastTime=0,imageURL=null,videoURL=null,logoURL=null,backgroundType='color',exporting=false,previewMode='scroll',timelineElapsed=0,timelineTotal=0,timelineScrollDuration=0;
+let exportRecorder=null,exportRaf=0,exportDrawFrame=null,exportStarted=false,exportStartTime=0,exportPausedAt=0,exportCancelled=false,exportResumeAction=null;
 
 function updateCounter(){
  const value=$('content').value,words=value.trim()?value.trim().split(/\s+/).length:0;
@@ -347,9 +356,10 @@ function updateTimelineUI(){
  const m=getScrollMetrics();timelineScrollDuration=m.scrollSeconds;timelineTotal=m.totalSeconds;
  $('currentTime').textContent=formatTime(timelineElapsed);$('totalTime').textContent=formatTime(timelineTotal);
  $('timelineSeek').value=String(Math.round((timelineTotal?timelineElapsed/timelineTotal:0)*1000));
- $('markStart').textContent='00:00';$('markMid').textContent=formatTime(timelineTotal/2);$('markEnd').textContent=formatTime(timelineTotal);
- $('customMinutes').disabled=$('durationMode').value!=='custom';$('customSeconds').disabled=$('durationMode').value!=='custom';
- $('durationHint').textContent=$('durationMode').value==='auto'?'Automatic duration: calculated from your text length and Scroll Speed.':'Custom total duration includes the Subscribe end screen, if enabled.';
+ $('autoDurationBtn').classList.toggle('active',$('durationMode').value==='auto');$('customDurationBtn').classList.toggle('active',$('durationMode').value==='custom');
+ $('durationFields').classList.toggle('visible',$('durationMode').value==='custom');
+ $('durationHint').textContent=$('durationMode').value==='auto'?'Auto duration uses your text length and scroll speed.':'Set the complete video length. Subscribe screen time is included.';
+ $('playPauseBtn').textContent=playing?'Ⅱ':'▶';$('playPauseBtn').setAttribute('aria-label',playing?'Pause':'Play');
 }
 function renderAtTime(seconds){
  const m=getScrollMetrics();timelineScrollDuration=m.scrollSeconds;timelineTotal=m.totalSeconds;
@@ -371,12 +381,15 @@ function renderAtTime(seconds){
  updateTimelineUI();
 }
 function resetScroll(){pauseScroll();previewMode='scroll';subscribePreview.classList.remove('show');timelineElapsed=0;const m=getScrollMetrics();position=m.startY;text.style.top=position+'px';updateTimelineUI();}
+function togglePlayPause(){if(playing)pauseScroll();else playScroll();}
+function setDurationMode(mode){pauseScroll();$('durationMode').value=mode;updateTimelineUI();renderAtTime(Math.min(timelineElapsed,getScrollMetrics().totalSeconds));}
+function togglePreviewFullscreen(){const el=$('previewStage');if(!document.fullscreenElement){(el.requestFullscreen||el.webkitRequestFullscreen)?.call(el);}else{(document.exitFullscreen||document.webkitExitFullscreen)?.call(document);}}
 // Keep the playhead at its current time when text or visual settings are edited.
 function refreshAtCurrentTime(){const savedTime=timelineElapsed;pauseScroll();updateTextStyle();renderAtTime(Math.min(savedTime,getScrollMetrics().totalSeconds));}
 function playScroll(){
  if(playing||exporting)return;
  const m=getScrollMetrics();if(timelineElapsed>=m.totalSeconds)timelineElapsed=0;
- playing=true;lastTime=0;if(backgroundType==='video')bgVideo.play().catch(()=>{});
+ playing=true;lastTime=0;$('playPauseBtn').textContent='Ⅱ';$('playPauseBtn').setAttribute('aria-label','Pause');if(backgroundType==='video')bgVideo.play().catch(()=>{});
  function frame(time){
   if(!playing)return;
   if(lastTime){timelineElapsed+=(time-lastTime)/1000;const total=getScrollMetrics().totalSeconds;
@@ -387,7 +400,7 @@ function playScroll(){
  }
  animation=requestAnimationFrame(frame);
 }
-function pauseScroll(){playing=false;cancelAnimationFrame(animation);lastTime=0;if(backgroundType==='video')bgVideo.pause();}
+function pauseScroll(){playing=false;cancelAnimationFrame(animation);lastTime=0;if(backgroundType==='video')bgVideo.pause();$('playPauseBtn').textContent='▶';$('playPauseBtn').setAttribute('aria-label','Play');}
 function showSubscribePreview(){
  if(!$('subscribeEnabled').checked)return;
  previewMode='subscribe';$('subscribePreview').querySelector('.subscribe-title').textContent=$('subscribeHeading').value;
@@ -513,90 +526,60 @@ function drawSubscribe(ctx,w,h,time){
  ctx.font=(26*scale)+'px Arial';ctx.fillText('👍     🔔',0,65*scale);ctx.restore();
 }
 async function exportVideo(){
- if(exporting)return;pauseScroll();const status=$('status'),progress=$('progress'),button=$('exportButton');
+ if(exporting)return;pauseScroll();const status=$('status'),progress=$('progress'),button=$('exportButton'),controls=$('exportControls');
  if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){status.textContent='Video recording not supported.';return;}
- exporting=true;button.disabled=true;let recorder=null,stream=null,raf=0,visibilityHandler=null;
+ exporting=true;exportCancelled=false;button.disabled=true;controls.style.display='none';$('exportPauseBtn').style.display='';$('exportResumeBtn').style.display='none';
+ let recorder=null,stream=null,raf=0,visibilityHandler=null;
  try{
   status.textContent='Preparing video...';progress.textContent='Loading fonts and background...';await waitForFonts();
   if(backgroundType==='image'&&!bgImage.complete)await new Promise((resolve,reject)=>{bgImage.onload=resolve;bgImage.onerror=reject;});
   if(backgroundType==='video'&&bgVideo.readyState<2)await new Promise((resolve,reject)=>{bgVideo.addEventListener('loadeddata',resolve,{once:true});bgVideo.addEventListener('error',reject,{once:true});});
+  if(exportCancelled)throw new Error('Export cancelled.');
   const ratio=$('format').value.split('/'),quality=Number($('quality').value),w=quality,h=Math.round(w*Number(ratio[1])/Number(ratio[0]));
   const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d'),fps=30;stream=canvas.captureStream(fps);
   const requested=$('exportFormat').value,mp4=['video/mp4;codecs=avc1.42E01E','video/mp4'],webm=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
   let mime;if(requested==='mp4')mime=mp4.find(t=>MediaRecorder.isTypeSupported(t));else if(requested==='webm')mime=webm.find(t=>MediaRecorder.isTypeSupported(t));else mime=[...mp4,...webm].find(t=>MediaRecorder.isTypeSupported(t));
   if(!mime)throw new Error('Video format not supported. Select Automatic or WebM.');
-  recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:quality===2160?18000000:8000000});const chunks=[];
-  const previewWidth=preview.getBoundingClientRect().width||360;
-  const scale=w/previewWidth;
+  recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:quality===2160?18000000:8000000});exportRecorder=recorder;const chunks=[];
+  const previewWidth=preview.getBoundingClientRect().width||360,scale=w/previewWidth;
   const fontSize=Math.max(1,Number($('fontSize').value)*scale),lineHeight=fontSize*Number($('lineSpacing').value),maxWidth=w*Number($('textWidth').value)/100,left=(w-maxWidth)/2;
   ctx.font=$('fontWeight').value+' '+fontSize+'px '+$('fontFamily').value;
   const lines=getLines(ctx,$('content').value,maxWidth),totalHeight=Math.max(lineHeight,lines.length*lineHeight),align=$('alignment').value;
   const textX=align==='left'?left:align==='right'?w-left:w/2;let y=h*Number($('textPosition').value)/100;
-  const textColor=$('textColor').value,textShadow=$('shadow').value==='yes';
-  const subscribeOn=$('subscribeEnabled').checked;
+  const textColor=$('textColor').value,textShadow=$('shadow').value==='yes',subscribeOn=$('subscribeEnabled').checked;
   const subscribeDuration=subscribeOn?Math.max(1,Math.min(20,Number($('subscribeDuration').value)||4)):0;
   const requestedTotal=$('durationMode').value==='custom'?Math.max(1,Math.min(14400,(Number($('customMinutes').value)||0)*60+(Number($('customSeconds').value)||0))):null;
-  const scrollDuration=requestedTotal===null?Math.max(0.5,(y+totalHeight+lineHeight)/(Number($('speed').value)*w/preview.clientWidth)):Math.max(0.5,requestedTotal-subscribeDuration);
-  const speed=(y+totalHeight+lineHeight)/scrollDuration;
-  const totalDuration=scrollDuration+subscribeDuration;
+  const scrollDuration=requestedTotal===null?Math.max(.5,(y+totalHeight+lineHeight)/(Number($('speed').value)*w/preview.clientWidth)):Math.max(.5,requestedTotal-subscribeDuration);
+  const speed=(y+totalHeight+lineHeight)/scrollDuration,totalDuration=scrollDuration+subscribeDuration;
   let started=false,stopped=false,startTime=0,pausedAt=0;
-  function cleanup(){
-   cancelAnimationFrame(raf);
-   document.removeEventListener('visibilitychange',visibilityHandler);
-   if(stream)stream.getTracks().forEach(t=>t.stop());
-   if(backgroundType==='video')bgVideo.pause();
-  }
+  function cleanup(){cancelAnimationFrame(raf);cancelAnimationFrame(exportRaf);document.removeEventListener('visibilitychange',visibilityHandler);if(stream)stream.getTracks().forEach(t=>t.stop());if(backgroundType==='video')bgVideo.pause();exportRecorder=null;exportDrawFrame=null;exportResumeAction=null;exportRaf=0;}
   recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
   recorder.onstop=()=>{
-   cleanup();const blob=new Blob(chunks,{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');
-   a.href=url;a.download='ScrollVideo.'+(mime.includes('mp4')?'mp4':'webm');document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
-   const sizeBytes=blob.size;
-   const sizeText=sizeBytes>=1024*1024*1024?(sizeBytes/(1024*1024*1024)).toFixed(2)+' GB':sizeBytes>=1024*1024?(sizeBytes/(1024*1024)).toFixed(2)+' MB':(sizeBytes/1024).toFixed(1)+' KB';
-   $('fileSize').textContent='Actual Video File Size: '+sizeText+' ('+sizeBytes.toLocaleString()+' bytes) | '+quality+'p | '+(mime.includes('mp4')?'MP4':'WebM');
-   status.textContent='Video Downloaded Successfully!';progress.textContent=quality+'p | '+(mime.includes('mp4')?'MP4':'WebM')+' | Background switching pauses export safely';exporting=false;button.disabled=false;
+   cleanup();exporting=false;button.disabled=false;controls.style.display='none';
+   if(exportCancelled){status.textContent='Export cancelled. No video was downloaded.';progress.textContent='You can change your settings and export again.';return;}
+   const blob=new Blob(chunks,{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ScrollVideo.'+(mime.includes('mp4')?'mp4':'webm');document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+   const sizeBytes=blob.size,sizeText=sizeBytes>=1024*1024*1024?(sizeBytes/(1024*1024*1024)).toFixed(2)+' GB':sizeBytes>=1024*1024?(sizeBytes/(1024*1024)).toFixed(2)+' MB':(sizeBytes/1024).toFixed(1)+' KB';
+   $('fileSize').textContent='Actual Video File Size: '+sizeText+' ('+sizeBytes.toLocaleString()+' bytes) | '+quality+'p | '+(mime.includes('mp4')?'MP4':'WebM');status.textContent='Video Downloaded Successfully!';progress.textContent=quality+'p | '+(mime.includes('mp4')?'MP4':'WebM');
   };
   function drawFrame(){
-   if(stopped||document.hidden)return;
-   const now=performance.now();if(!started){started=true;startTime=now;}
+   if(stopped||document.hidden||recorder.state!=='recording')return;
+   const now=performance.now();if(!started){started=true;startTime=now;exportStarted=true;exportStartTime=now;}
    const elapsed=(now-startTime)/1000;drawBackground(ctx,w,h);
-   if(elapsed<scrollDuration){
-    const currentY=y-speed*elapsed;
-    ctx.save();ctx.beginPath();ctx.rect(0,0,w,h);ctx.clip();
-    ctx.font=$('fontWeight').value+' '+fontSize+'px '+$('fontFamily').value;
-    ctx.fillStyle=textColor;ctx.textAlign=align;ctx.textBaseline='top';
-    if(textShadow){ctx.shadowColor='#000';ctx.shadowBlur=8*scale;ctx.shadowOffsetX=0;ctx.shadowOffsetY=2*scale;}
-    lines.forEach((line,i)=>ctx.fillText(line,textX,currentY+i*lineHeight,maxWidth));
-    ctx.restore();
-   }else if(subscribeOn){drawSubscribe(ctx,w,h,elapsed-scrollDuration);}
-   drawLogo(ctx,w,h);drawWatermark(ctx,w,h);
-   const percent=Math.min(100,Math.round(elapsed/totalDuration*100));progress.textContent='Rendering Video: '+percent+'%';
-   if(elapsed<totalDuration)raf=requestAnimationFrame(drawFrame);
-   else{stopped=true;if(recorder.state!=='inactive')recorder.stop();}
+   if(elapsed<scrollDuration){const currentY=y-speed*elapsed;ctx.save();ctx.beginPath();ctx.rect(0,0,w,h);ctx.clip();ctx.font=$('fontWeight').value+' '+fontSize+'px '+$('fontFamily').value;ctx.fillStyle=textColor;ctx.textAlign=align;ctx.textBaseline='top';if(textShadow){ctx.shadowColor='#000';ctx.shadowBlur=8*scale;ctx.shadowOffsetX=0;ctx.shadowOffsetY=2*scale;}lines.forEach((line,i)=>ctx.fillText(line,textX,currentY+i*lineHeight,maxWidth));ctx.restore();}
+   else if(subscribeOn)drawSubscribe(ctx,w,h,elapsed-scrollDuration);
+   drawLogo(ctx,w,h);drawWatermark(ctx,w,h);progress.textContent='Rendering Video: '+Math.min(100,Math.round(elapsed/totalDuration*100))+'%';
+   if(elapsed<totalDuration)raf=requestAnimationFrame(drawFrame);else{stopped=true;if(recorder.state!=='inactive')recorder.stop();}
   }
-  visibilityHandler=function(){
-   if(!recorder||stopped)return;
-   if(document.hidden){
-    if(recorder.state==='recording'){
-     pausedAt=performance.now();recorder.pause();cancelAnimationFrame(raf);
-     if(backgroundType==='video')bgVideo.pause();
-     status.textContent='Export paused while you use another app. Return to this page to continue.';
-     progress.textContent='Your video will resume automatically when you return.';
-    }
-   }else if(recorder.state==='paused'){
-    const now=performance.now();if(started&&pausedAt)startTime+=now-pausedAt;pausedAt=0;
-    recorder.resume();
-    if(backgroundType==='video')bgVideo.play().catch(()=>{});
-    status.textContent='Export resumed...';raf=requestAnimationFrame(drawFrame);
-   }
-  };
+  exportDrawFrame=drawFrame;exportStarted=false;exportStartTime=0;exportPausedAt=0;exportResumeAction=()=>{if(started&&exportPausedAt)startTime+=performance.now()-exportPausedAt;exportStartTime=startTime;exportPausedAt=0;};
+  visibilityHandler=function(){if(!recorder||stopped)return;if(document.hidden&&recorder.state==='recording'){pausedAt=performance.now();exportPausedAt=pausedAt;recorder.pause();cancelAnimationFrame(raf);if(backgroundType==='video')bgVideo.pause();status.textContent='Export paused because you left this page.';progress.textContent='Return to this page and press Resume Export.';$('exportPauseBtn').style.display='none';$('exportResumeBtn').style.display='';} };
   document.addEventListener('visibilitychange',visibilityHandler);
-  status.textContent='Recording video...';progress.textContent='Keep this page open. Switching apps will pause export and resume when you return.';
-  recorder.start(1000);if(backgroundType==='video')bgVideo.play().catch(()=>{});raf=requestAnimationFrame(drawFrame);
- }catch(error){
-  console.error(error);if(stream)stream.getTracks().forEach(t=>t.stop());if(recorder&&recorder.state!=='inactive'){try{recorder.stop();}catch(e){}}
-  status.textContent='Error: '+error.message;progress.textContent='Try again with 1080p or WebM.';exporting=false;button.disabled=false;
- }
+  status.textContent='Recording video...';progress.textContent='You can pause, resume or cancel export at any time.';recorder.start(1000);controls.style.display='flex';if(backgroundType==='video')bgVideo.play().catch(()=>{});raf=requestAnimationFrame(drawFrame);exportRaf=raf;
+ }catch(error){console.error(error);if(stream)stream.getTracks().forEach(t=>t.stop());if(recorder&&recorder.state!=='inactive'){try{recorder.stop();}catch(e){}}exportRecorder=null;exporting=false;button.disabled=false;controls.style.display='none';if(!exportCancelled){status.textContent='Error: '+error.message;progress.textContent='Try again with 1080p or WebM.';}}
 }
+function pauseExport(){if(!exportRecorder||exportRecorder.state!=='recording')return;exportPausedAt=performance.now();exportRecorder.pause();cancelAnimationFrame(exportRaf);if(backgroundType==='video')bgVideo.pause();$('exportPauseBtn').style.display='none';$('exportResumeBtn').style.display='';$('status').textContent='Export paused. You can resume or cancel.';$('progress').textContent='Your export is safely paused.';}
+function resumeExport(){if(!exportRecorder||exportRecorder.state!=='paused')return;if(exportResumeAction)exportResumeAction();exportRecorder.resume();if(backgroundType==='video')bgVideo.play().catch(()=>{});$('exportPauseBtn').style.display='';$('exportResumeBtn').style.display='none';$('status').textContent='Export resumed...';exportRaf=requestAnimationFrame(exportDrawFrame);}
+function cancelExport(){if(!exportRecorder||exportRecorder.state==='inactive')return;exportCancelled=true;$('status').textContent='Cancelling export...';$('progress').textContent='The incomplete video will not be downloaded.';try{exportRecorder.stop();}catch(e){exporting=false;$('exportButton').disabled=false;$('exportControls').style.display='none';}}
+
 
 
 /* Keep the real Live Preview visible while scrolling through settings.
