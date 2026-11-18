@@ -615,11 +615,17 @@ async function exportVideo(){
   if(backgroundType==='video'&&bgVideo.readyState<2)await new Promise((resolve,reject)=>{bgVideo.addEventListener('loadeddata',resolve,{once:true});bgVideo.addEventListener('error',reject,{once:true});});
   if(exportCancelled)throw new Error('Export cancelled.');
   const ratio=$('format').value.split('/'),quality=Number($('quality').value),w=quality,h=Math.round(w*Number(ratio[1])/Number(ratio[0]));
-  const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d'),fps=30;stream=canvas.captureStream(fps);
+  const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d',{alpha:false}),fps=60;
+  // Prefer explicit frame capture: the recorder receives a frame only after
+  // the complete canvas has been painted. This avoids uneven automatic
+  // sampling of the scrolling text on mobile browsers.
+  stream=canvas.captureStream(0);const captureTrack=stream.getVideoTracks()[0];
+  const manualFrameCapture=!!(captureTrack&&typeof captureTrack.requestFrame==='function');
+  if(!manualFrameCapture){stream.getTracks().forEach(t=>t.stop());stream=canvas.captureStream(fps);}
   const requested=$('exportFormat').value,mp4=['video/mp4;codecs=avc1.42E01E','video/mp4'],webm=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
   let mime;if(requested==='mp4')mime=mp4.find(t=>MediaRecorder.isTypeSupported(t));else if(requested==='webm')mime=webm.find(t=>MediaRecorder.isTypeSupported(t));else mime=[...mp4,...webm].find(t=>MediaRecorder.isTypeSupported(t));
   if(!mime)throw new Error('Video format not supported. Select Automatic or WebM.');
-  recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:quality===2160?18000000:8000000});exportRecorder=recorder;const chunks=[];
+  recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:quality===2160?35000000:16000000});exportRecorder=recorder;const chunks=[];
   const previewWidth=preview.getBoundingClientRect().width||360,scale=w/previewWidth;
   // Use the same font and browser-measured DOM line fragments as Live Preview.
   const computedText=getComputedStyle(text);
@@ -667,7 +673,11 @@ async function exportVideo(){
    const elapsed=(now-startTime)/1000;drawBackground(ctx,w,h);
    if(elapsed<scrollDuration){const currentY=y-speed*elapsed;ctx.save();ctx.beginPath();ctx.rect(0,0,w,h);ctx.clip();ctx.drawImage(textLayer,0,Math.round(currentY));ctx.restore();}
    else if(subscribeOn)drawSubscribe(ctx,w,h,elapsed-scrollDuration);
-   drawLogo(ctx,w,h);drawWatermark(ctx,w,h);progress.textContent='Rendering Video: '+Math.min(100,Math.round(elapsed/totalDuration*100))+'%';
+   drawLogo(ctx,w,h);drawWatermark(ctx,w,h);
+   // Request capture after the full frame is ready. On 60 Hz displays this
+   // records smooth 60 FPS motion instead of 30 FPS jumps.
+   if(manualFrameCapture&&captureTrack.readyState==='live')captureTrack.requestFrame();
+   progress.textContent='Rendering Video: '+Math.min(100,Math.round(elapsed/totalDuration*100))+'%';
    if(elapsed<totalDuration)raf=requestAnimationFrame(drawFrame);else{stopped=true;if(recorder.state!=='inactive')recorder.stop();}
   }
   exportDrawFrame=drawFrame;exportStarted=false;exportStartTime=0;exportPausedAt=0;exportResumeAction=()=>{if(started&&exportPausedAt)startTime+=performance.now()-exportPausedAt;exportStartTime=startTime;exportPausedAt=0;};
