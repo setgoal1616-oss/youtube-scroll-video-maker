@@ -39,12 +39,12 @@ button:disabled{opacity:.5;cursor:not-allowed}
 #logoPreview{position:absolute;width:75px;height:75px;object-fit:contain;top:15px;right:15px;z-index:5;display:none;touch-action:none;cursor:move;user-select:none}
 #watermarkPreview{position:absolute;bottom:12px;right:15px;color:white;font-size:16px;font-weight:bold;z-index:5;text-shadow:0 2px 5px black;pointer-events:auto;touch-action:none;cursor:move;user-select:none;white-space:nowrap}
 #subscribePreview{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.5);opacity:0;z-index:10;text-align:center;width:90%;pointer-events:none}
-#subscribePreview.show{animation:subscribeIn .7s ease forwards}
-@keyframes subscribeIn{to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+#subscribePreview.show{opacity:1}
+#subscribePreview .subscribe-button{animation:none;transform-origin:center}
 .subscribe-card{display:inline-block;padding:15px 20px;background:rgba(0,0,0,.82);border:1px solid rgba(255,255,255,.2);border-radius:15px;box-shadow:0 5px 25px #000}
 .subscribe-title{font-size:clamp(16px,3vw,28px);font-weight:bold;margin-bottom:12px}
 .subscribe-button{display:inline-block;padding:12px 23px;background:#e62117;border-radius:9px;font-size:clamp(14px,2vw,21px);font-weight:bold;color:white;animation:pulse 1s infinite}
-@keyframes pulse{50%{transform:scale(1.07)}}
+
 .subscribe-icons{margin-top:12px;font-size:24px}
 .status{color:#a995ff;font-size:14px;margin-top:12px}
 .timeline{margin-top:9px;padding:10px 12px;background:#0d111d;border:1px solid #30364a;border-radius:10px}
@@ -267,7 +267,7 @@ Please Like, Share and Subscribe!</textarea>
 <div><label>Animation Duration (Seconds)</label><input type="number" id="subscribeDuration" value="4" min="1" max="20"></div>
 <div><label>Button Colour</label><input type="color" id="subscribeColor" value="#e62117"></div>
 </div>
-<p class="note">The Subscribe animation will appear after your scrolling text finishes. It includes Subscribe, Like and Bell symbols.</p>
+<p class="note">The Subscribe animation will appear after your scrolling text finishes. Preview and export now share the same timing, easing and button pulse. Actual recording smoothness still depends on your device and browser.</p>
 <button class="secondary" onclick="testSubscribe()">Preview Subscribe Animation</button>
 </section>
 
@@ -377,22 +377,32 @@ function updateTimelineUI(){
  $('durationHint').textContent=$('durationMode').value==='auto'?'Auto duration uses your text length and scroll speed.':'Set the complete video length. Subscribe screen time is included.';
  $('playPauseBtn').textContent=playing?'Ⅱ':'▶';$('playPauseBtn').setAttribute('aria-label',playing?'Pause':'Play');
 }
+function getTimelineState(seconds,metrics=getScrollMetrics()){
+ const time=Math.max(0,Math.min(Number(seconds)||0,metrics.totalSeconds));
+ const inSubscribe=$('subscribeEnabled').checked&&time>=metrics.scrollSeconds;
+ const subscribeTime=inSubscribe?time-metrics.scrollSeconds:0;
+ const rawProgress=Math.max(0,Math.min(1,subscribeTime/.7));
+ // Shared easing and pulse calculations are used by preview and export.
+ const eased=1-Math.pow(1-rawProgress,3);
+ return {time,phase:inSubscribe?'subscribe':'scroll',scrollProgress:Math.min(1,time/Math.max(.001,metrics.scrollSeconds)),y:metrics.startY-metrics.distance*Math.min(1,time/Math.max(.001,metrics.scrollSeconds)),subscribeTime,subscribeOpacity:eased,subscribeScale:.75+.25*eased,buttonPulse:1+.07*Math.sin(subscribeTime*Math.PI*2)};
+}
 function renderAtTime(seconds){
  const m=getScrollMetrics();timelineScrollDuration=m.scrollSeconds;timelineTotal=m.totalSeconds;
- timelineElapsed=Math.max(0,Math.min(seconds,timelineTotal));
- if(timelineElapsed<timelineScrollDuration||!$('subscribeEnabled').checked){
+ const state=getTimelineState(seconds,m);timelineElapsed=state.time;
+ if(state.phase==='scroll'){
   previewMode='scroll';subscribePreview.classList.remove('show');
-  position=m.startY-m.distance*(timelineScrollDuration?timelineElapsed/timelineScrollDuration:0);
-  text.style.top=position+'px';
+  position=state.y;text.style.top=position+'px';
+  subscribePreview.style.opacity='0';subscribePreview.style.transform='translate(-50%,-50%) scale(.75)';
  }else{
   position=-text.offsetHeight;text.style.top=position+'px';
-  if(previewMode!=='subscribe'){
-   previewMode='subscribe';
-   $('subscribePreview').querySelector('.subscribe-title').textContent=$('subscribeHeading').value;
-   $('subscribePreview').querySelector('.subscribe-button').textContent=$('subscribeButtonText').value;
-   $('subscribePreview').querySelector('.subscribe-button').style.background=$('subscribeColor').value;
-   subscribePreview.classList.remove('show');void subscribePreview.offsetWidth;subscribePreview.classList.add('show');
-  }
+  previewMode='subscribe';
+  $('subscribePreview').querySelector('.subscribe-title').textContent=$('subscribeHeading').value;
+  const subButton=$('subscribePreview').querySelector('.subscribe-button');
+  subButton.textContent=$('subscribeButtonText').value;subButton.style.background=$('subscribeColor').value;
+  subscribePreview.classList.add('show');
+  subscribePreview.style.opacity=String(state.subscribeOpacity);
+  subscribePreview.style.transform=`translate(-50%,-50%) scale(${state.subscribeScale})`;
+  subButton.style.transform=`scale(${state.buttonPulse})`;
  }
  updateTimelineUI();
 }
@@ -409,7 +419,7 @@ function refreshAtCurrentTime(){const savedTime=timelineElapsed;pauseScroll();up
 function playScroll(){
  if(playing||exporting)return;
  const m=getScrollMetrics();if(timelineElapsed>=m.totalSeconds)timelineElapsed=0;
- playing=true;lastTime=0;$('playPauseBtn').textContent='Ⅱ';$('playPauseBtn').setAttribute('aria-label','Pause');if(backgroundType==='video')bgVideo.play().catch(()=>{});
+ playing=true;lastTime=0;$('playPauseBtn').textContent='Ⅱ';$('playPauseBtn').setAttribute('aria-label','Pause');if(backgroundType==='video'){if(timelineElapsed===0){try{bgVideo.currentTime=0;}catch(e){}}bgVideo.play().catch(()=>{});}
  function frame(time){
   if(!playing)return;
   if(lastTime){timelineElapsed+=(time-lastTime)/1000;const total=getScrollMetrics().totalSeconds;
@@ -423,13 +433,10 @@ function playScroll(){
 function pauseScroll(){playing=false;cancelAnimationFrame(animation);lastTime=0;if(backgroundType==='video')bgVideo.pause();$('playPauseBtn').textContent='▶';$('playPauseBtn').setAttribute('aria-label','Play');}
 function showSubscribePreview(){
  if(!$('subscribeEnabled').checked)return;
- previewMode='subscribe';$('subscribePreview').querySelector('.subscribe-title').textContent=$('subscribeHeading').value;
- $('subscribePreview').querySelector('.subscribe-button').textContent=$('subscribeButtonText').value;
- $('subscribePreview').querySelector('.subscribe-button').style.background=$('subscribeColor').value;
- subscribePreview.classList.remove('show');void subscribePreview.offsetWidth;subscribePreview.classList.add('show');
+ const m=getScrollMetrics();renderAtTime(Math.min(m.totalSeconds,m.scrollSeconds+.35));
 }
 function testSubscribe(){pauseScroll();position=preview.clientHeight+100;text.style.top=position+'px';showSubscribePreview();}
-$('timelineSeek').addEventListener('input',function(){pauseScroll();renderAtTime(Number(this.value)/1000*getScrollMetrics().totalSeconds);});
+$('timelineSeek').addEventListener('input',function(){pauseScroll();const t=Number(this.value)/1000*getScrollMetrics().totalSeconds;renderAtTime(t);if(backgroundType==='video'&&Number.isFinite(bgVideo.duration)&&bgVideo.duration>0){try{bgVideo.currentTime=t%bgVideo.duration;}catch(e){}}});
 ['durationMode','customMinutes','customSeconds','subscribeEnabled','subscribeDuration','speed','textPosition'].forEach(id=>{$(id).addEventListener('input',()=>{if(id==='durationMode')resetScroll();else{const old=timelineElapsed;updateTimelineUI();renderAtTime(Math.min(old,timelineTotal));}});$(id).addEventListener('change',()=>{if(id==='durationMode')resetScroll();else{const old=timelineElapsed;updateTimelineUI();renderAtTime(Math.min(old,timelineTotal));}});});
 
 $('logoUpload').addEventListener('change',function(e){
@@ -593,15 +600,16 @@ function drawWatermark(ctx,w,h){
  const x=watermarkPoint.x*w,y=watermarkPoint.y*h;ctx.fillText(value,x,y);ctx.restore();
 }
 function drawSubscribe(ctx,w,h,time){
- const scale=w/1080,progress=Math.min(1,time/.7),opacity=progress,zoom=.75+(.25*progress);
+ const scale=w/1080,raw=Math.max(0,Math.min(1,time/.7)),progress=1-Math.pow(1-raw,3),opacity=progress,zoom=.75+.25*progress;
+ const pulse=1+.07*Math.sin(Math.max(0,time)*Math.PI*2);
  ctx.save();ctx.globalAlpha=opacity;ctx.translate(w/2,h/2);ctx.scale(zoom,zoom);
  const boxW=w*.82,boxH=155*scale,x=-boxW/2,y=-boxH/2,radius=18*scale;
  ctx.fillStyle='rgba(0,0,0,.86)';ctx.beginPath();ctx.roundRect(x,y,boxW,boxH,radius);ctx.fill();
  ctx.strokeStyle='rgba(255,255,255,.25)';ctx.lineWidth=2*scale;ctx.stroke();
  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#fff';ctx.font='bold '+(30*scale)+'px Arial';
  ctx.fillText($('subscribeHeading').value,0,-38*scale);
- const buttonW=boxW*.65,buttonH=48*scale;ctx.fillStyle=$('subscribeColor').value;ctx.beginPath();ctx.roundRect(-buttonW/2,-buttonH/2+12*scale,buttonW,buttonH,10*scale);ctx.fill();
- ctx.fillStyle='#fff';ctx.font='bold '+(23*scale)+'px Arial';ctx.fillText($('subscribeButtonText').value,0,12*scale);
+ const buttonW=boxW*.65,buttonH=48*scale;ctx.save();ctx.translate(0,12*scale);ctx.scale(pulse,pulse);ctx.fillStyle=$('subscribeColor').value;ctx.beginPath();ctx.roundRect(-buttonW/2,-buttonH/2,buttonW,buttonH,10*scale);ctx.fill();
+ ctx.fillStyle='#fff';ctx.font='bold '+(23*scale)+'px Arial';ctx.fillText($('subscribeButtonText').value,0,0);ctx.restore();
  ctx.font=(26*scale)+'px Arial';ctx.fillText('👍     🔔',0,65*scale);ctx.restore();
 }
 async function exportVideo(){
@@ -610,9 +618,10 @@ async function exportVideo(){
  exporting=true;exportCancelled=false;button.disabled=true;controls.style.display='none';$('exportPauseBtn').style.display='';$('exportResumeBtn').style.display='none';
  let recorder=null,stream=null,raf=0,visibilityHandler=null;
  try{
-  status.textContent='Preparing video...';progress.textContent='Loading fonts and background...';await waitForFonts();
+  status.textContent='Preparing video...';progress.textContent='Loading fonts and background...';await waitForFonts();if(document.fonts&&document.fonts.ready)await document.fonts.ready;await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
   if(backgroundType==='image'&&!bgImage.complete)await new Promise((resolve,reject)=>{bgImage.onload=resolve;bgImage.onerror=reject;});
   if(backgroundType==='video'&&bgVideo.readyState<2)await new Promise((resolve,reject)=>{bgVideo.addEventListener('loadeddata',resolve,{once:true});bgVideo.addEventListener('error',reject,{once:true});});
+  if(backgroundType==='video'){bgVideo.pause();try{bgVideo.currentTime=0;}catch(e){}await new Promise(resolve=>{if(bgVideo.readyState>=2&&bgVideo.currentTime===0)return resolve();const done=()=>resolve();bgVideo.addEventListener('seeked',done,{once:true});setTimeout(done,500);});}
   if(exportCancelled)throw new Error('Export cancelled.');
   const ratio=$('format').value.split('/'),quality=Number($('quality').value),w=quality,h=Math.round(w*Number(ratio[1])/Number(ratio[0]));
   const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d',{alpha:false}),fps=60;
@@ -625,7 +634,8 @@ async function exportVideo(){
   const requested=$('exportFormat').value,mp4=['video/mp4;codecs=avc1.42E01E','video/mp4'],webm=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
   let mime;if(requested==='mp4')mime=mp4.find(t=>MediaRecorder.isTypeSupported(t));else if(requested==='webm')mime=webm.find(t=>MediaRecorder.isTypeSupported(t));else mime=[...mp4,...webm].find(t=>MediaRecorder.isTypeSupported(t));
   if(!mime)throw new Error('Video format not supported. Select Automatic or WebM.');
-  recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:quality===2160?35000000:16000000});exportRecorder=recorder;const chunks=[];
+  const targetBitrate=quality>=2160?24000000:quality>=1440?14000000:9000000;
+  recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:targetBitrate});exportRecorder=recorder;const chunks=[];
   const previewWidth=preview.getBoundingClientRect().width||360,scale=w/previewWidth;
   // Build the export text layer from the same browser HTML text layout.
   // Canvas fillText reshapes Bengali conjuncts/matras differently from DOM
@@ -658,12 +668,12 @@ async function exportVideo(){
   }
   const subscribeDuration=subscribeOn?Math.max(1,Math.min(20,Number($('subscribeDuration').value)||4)):0;
   const previewMetrics=getScrollMetrics();
-  const scrollDuration=Math.max(.5,previewMetrics.scrollSeconds);
+  const scrollDuration=previewMetrics.scrollSeconds;
   // Match the DOM preview's exact travel distance and duration.
   const y=previewMetrics.startY*scale;
   const exportTravelDistance=previewMetrics.distance*scale;
   const speed=exportTravelDistance/scrollDuration;
-  const totalDuration=scrollDuration+subscribeDuration;
+  const totalDuration=previewMetrics.totalSeconds;
   let started=false,stopped=false,startTime=0,pausedAt=0;
   function cleanup(){cancelAnimationFrame(raf);cancelAnimationFrame(exportRaf);document.removeEventListener('visibilitychange',visibilityHandler);if(stream)stream.getTracks().forEach(t=>t.stop());if(backgroundType==='video')bgVideo.pause();exportRecorder=null;exportDrawFrame=null;exportResumeAction=null;exportRaf=0;}
   recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
@@ -678,8 +688,9 @@ async function exportVideo(){
    if(stopped||document.hidden||recorder.state!=='recording')return;
    const now=performance.now();if(!started){started=true;startTime=now;exportStarted=true;exportStartTime=now;}
    const elapsed=(now-startTime)/1000;drawBackground(ctx,w,h);
-   if(elapsed<scrollDuration){const currentY=y-speed*elapsed;ctx.save();ctx.beginPath();ctx.rect(0,0,w,h);ctx.clip();ctx.drawImage(textLayer,0,Math.round(currentY));ctx.restore();}
-   else if(subscribeOn)drawSubscribe(ctx,w,h,elapsed-scrollDuration);
+   const frameState=getTimelineState(elapsed,previewMetrics);
+   if(frameState.phase==='scroll'){const currentY=frameState.y*scale;ctx.save();ctx.beginPath();ctx.rect(0,0,w,h);ctx.clip();ctx.drawImage(textLayer,0,currentY);ctx.restore();}
+   else if(subscribeOn)drawSubscribe(ctx,w,h,frameState.subscribeTime);
    drawLogo(ctx,w,h);drawWatermark(ctx,w,h);
    // Request capture after the full frame is ready. On 60 Hz displays this
    // records smooth 60 FPS motion instead of 30 FPS jumps.
